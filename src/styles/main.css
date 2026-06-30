@@ -43,6 +43,7 @@ a {
 
 .app-shell {
   min-height: 100vh;
+  position: relative;
 }
 
 .app-aside {
@@ -50,6 +51,28 @@ a {
   background: rgba(245, 250, 245, 0.78);
   backdrop-filter: blur(18px);
   padding: 24px 18px;
+  transition:
+    width 0.25s ease,
+    transform 0.25s ease,
+    opacity 0.25s ease;
+  overflow: hidden;
+  z-index: 30;
+}
+
+.app-aside--collapsed {
+  padding-inline: 12px;
+}
+
+.app-content-shell {
+  min-width: 0;
+}
+
+.app-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 28, 29, 0.38);
+  backdrop-filter: blur(2px);
+  z-index: 20;
 }
 
 .brand-block {
@@ -58,6 +81,11 @@ a {
   background: linear-gradient(160deg, #1f4f3c 0%, #2d7a56 100%);
   color: #f8fff8;
   margin-bottom: 20px;
+}
+
+.brand-block--compact {
+  padding: 18px 12px;
+  text-align: center;
 }
 
 .brand-block h1,
@@ -103,6 +131,24 @@ a {
   margin-bottom: 6px;
 }
 
+.account-panel--compact {
+  display: grid;
+  place-items: center;
+  min-height: 76px;
+  padding: 12px;
+}
+
+.account-panel--compact strong {
+  margin: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .side-menu.el-menu {
   border-right: none;
   background: transparent;
@@ -125,6 +171,16 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+
+.app-header__group {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.sidebar-toggle {
+  flex: 0 0 auto;
 }
 
 .page-kicker {
@@ -428,9 +484,19 @@ a {
   }
 
   .app-aside {
-    width: 100% !important;
-    border-right: none;
-    border-bottom: 1px solid var(--shell-border);
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(280px, calc(100vw - 32px)) !important;
+    border-right: 1px solid var(--shell-border);
+    border-bottom: none;
+    transform: translateX(-100%);
+    box-shadow: 0 18px 48px rgba(36, 50, 51, 0.14);
+  }
+
+  .app-aside--open {
+    transform: translateX(0);
   }
 
   .app-header,
@@ -455,6 +521,10 @@ a {
   .app-main,
   .app-header {
     padding-inline: 18px;
+  }
+
+  .app-header {
+    padding-top: 18px;
   }
 }
 
@@ -483,5 +553,9 @@ a {
 
   .statistics-chart {
     min-height: 280px;
+  }
+
+  .app-header__group {
+    width: 100%;
   }
 }

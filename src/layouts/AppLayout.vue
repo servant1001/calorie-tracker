@@ -44,6 +44,8 @@ const pageTitleMap: Record<string, string> = {
 
 const activePath = computed(() => route.path)
 const accountLabel = computed(() => authStore.displayName || authStore.email || '已登入使用者')
+const accountEmail = computed(() => authStore.email || 'calorie-tracker user')
+const accountInitial = computed(() => String(accountLabel.value).trim().slice(0, 1).toUpperCase() || 'C')
 const currentPageTitle = computed(() => pageTitleMap[String(route.name ?? '')] ?? 'Calorie Tracker')
 const sidebarClasses = computed(() => ({
   'app-aside--open': isSidebarOpen.value,
@@ -119,14 +121,25 @@ onBeforeUnmount(() => {
         </p>
       </div>
 
-      <div v-if="!isSidebarCollapsed || isMobile" class="account-panel">
-        <p class="account-panel__label">目前登入</p>
-        <strong>{{ accountLabel }}</strong>
-        <el-button :icon="SwitchButton" text @click="handleLogout">登出</el-button>
+      <div v-if="!isSidebarCollapsed || isMobile" class="account-panel account-panel--featured">
+        <div class="account-panel__glow"></div>
+        <div class="account-panel__top">
+          <div class="account-avatar">{{ accountInitial }}</div>
+          <div class="account-copy">
+            <p class="account-panel__label">目前登入</p>
+            <strong>{{ accountLabel }}</strong>
+            <span>{{ accountEmail }}</span>
+          </div>
+        </div>
+
+        <div class="account-panel__footer">
+          <span class="account-status">Wellness mode active</span>
+          <el-button :icon="SwitchButton" text @click="handleLogout">登出</el-button>
+        </div>
       </div>
 
       <div v-else class="account-panel account-panel--compact">
-        <strong>{{ String(accountLabel).slice(0, 1).toUpperCase() }}</strong>
+        <strong>{{ accountInitial }}</strong>
       </div>
 
       <el-menu :default-active="activePath" class="side-menu" router :collapse="!isMobile && isSidebarCollapsed">

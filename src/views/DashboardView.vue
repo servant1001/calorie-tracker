@@ -350,7 +350,7 @@ onMounted(async () => {
     </el-card>
 
     <el-row :gutter="16">
-      <el-col v-for="card in statCards" :key="card.label" :xs="24" :sm="12" :lg="6">
+      <el-col v-for="card in statCards" :key="card.label" :xs="12" :sm="12" :lg="6">
         <article :class="['dashboard-kpi', `dashboard-kpi--${card.tone}`]">
           <div class="dashboard-kpi__icon">
             <component :is="card.icon" :size="20" />
@@ -802,8 +802,19 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 
+  /* Add vertical spacing for KPI cards when they wrap to multiple rows */
   .dashboard-kpi {
     min-height: 164px;
+    margin-bottom: 12px;
+  }
+
+  /* Add vertical spacing between stacked rows (sections) on small screens */
+  .dashboard-page .el-row {
+    margin-top: 16px;
+  }
+
+  .el-row > .el-col:not(:first-child) {
+    margin-top: 16px;
   }
 }
 

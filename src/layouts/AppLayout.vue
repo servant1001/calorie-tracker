@@ -12,6 +12,7 @@ import {
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import calorieTrackerLogo from '@/assets/calorie-tracker-logo.png'
 import { useAuthStore } from '@/stores/auth'
 import { showError, showSuccess } from '@/utils/message'
 
@@ -118,8 +119,15 @@ onBeforeUnmount(() => {
       @click.stop
     >
       <div class="brand-block" :class="{ 'brand-block--compact': !isMobile && isSidebarCollapsed }">
-        <p v-if="!isSidebarCollapsed || isMobile" class="brand-kicker">Daily wellness</p>
-        <h1>{{ !isSidebarCollapsed || isMobile ? 'Calorie Tracker' : 'CT' }}</h1>
+        <div class="brand-block__header">
+          <div class="brand-block__logo-shell">
+            <img class="brand-block__logo" :src="calorieTrackerLogo" alt="Calorie Tracker logo" />
+          </div>
+          <div v-if="!isSidebarCollapsed || isMobile" class="brand-block__copy">
+            <p class="brand-kicker">Daily wellness</p>
+            <h1>Calorie Tracker</h1>
+          </div>
+        </div>
         <p v-if="!isSidebarCollapsed || isMobile" class="brand-copy">
           追蹤飲食、運動與體重，把每天的熱量變化看得更清楚。
         </p>

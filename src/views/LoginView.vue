@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
 import {
-  Apple,
   ArrowRight,
   Bot,
   ChartLine,
@@ -15,6 +14,7 @@ import {
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import calorieTrackerLogo from '@/assets/calorie-tracker-logo.png'
 import { loginWithEmail } from '@/firebase/auth'
 import { useAuthStore } from '@/stores/auth'
 import type { AuthForm } from '@/types/auth'
@@ -102,11 +102,10 @@ async function handleGoogleLogin() {
     <div class="login-layout">
       <aside class="login-hero">
         <div class="login-brand">
-          <div class="login-brand__mark">
-            <Apple :size="18" />
-            <Leaf :size="18" />
+          <div class="login-brand__logo-shell">
+            <img class="login-brand__logo" :src="calorieTrackerLogo" alt="Calorie Tracker logo" />
           </div>
-          <div>
+          <div class="login-brand__copy">
             <p class="login-brand__name">Calorie Tracker</p>
             <p class="login-brand__kicker">Healthy Starts Here.</p>
           </div>
@@ -165,6 +164,12 @@ async function handleGoogleLogin() {
       <main class="login-panel">
         <div class="login-card">
           <div class="login-card__header">
+            <div class="login-card__brand">
+              <div class="login-card__brand-mark">
+                <img :src="calorieTrackerLogo" alt="Calorie Tracker logo" />
+              </div>
+              <span>Calorie Tracker</span>
+            </div>
             <p class="login-card__eyebrow">Welcome Back</p>
             <h2>歡迎回來</h2>
             <p>登入你的帳號，以繼續管理健康生活。</p>
@@ -301,33 +306,48 @@ async function handleGoogleLogin() {
 .login-brand {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+  width: fit-content;
+  padding: 14px 18px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: 0 24px 60px rgba(17, 24, 39, 0.08);
+  backdrop-filter: blur(24px);
 }
 
-.login-brand__mark {
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.76);
-  border: 1px solid rgba(16, 185, 129, 0.18);
-  box-shadow: 0 20px 50px rgba(17, 24, 39, 0.08);
+.login-brand__logo-shell {
+  width: 82px;
+  height: 82px;
+  border-radius: 24px;
   display: grid;
   place-items: center;
-  color: #10b981;
-  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(242, 252, 248, 0.92));
+  box-shadow:
+    inset 0 0 0 1px rgba(16, 185, 129, 0.1),
+    0 18px 36px rgba(17, 24, 39, 0.08);
 }
 
-.login-brand__mark :deep(svg:last-child) {
-  position: absolute;
-  bottom: 10px;
-  right: 8px;
-  color: #3b82f6;
+.login-brand__logo {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 10px 18px rgba(59, 130, 246, 0.1));
+}
+
+.login-brand__copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .login-brand__name {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: #111827;
 }
 
@@ -537,6 +557,36 @@ async function handleGoogleLogin() {
   color: #111827;
 }
 
+.login-card__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.08);
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.login-card__brand-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  box-shadow: 0 10px 18px rgba(16, 185, 129, 0.12);
+}
+
+.login-card__brand-mark img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
 .login-card__header p:last-child {
   margin: 14px 0 0;
   color: #6b7280;
@@ -613,6 +663,7 @@ async function handleGoogleLogin() {
 }
 
 .login-form__google-mark {
+  margin: 0 10px;
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -689,6 +740,26 @@ async function handleGoogleLogin() {
 
   .login-card__header h2 {
     font-size: 28px;
+  }
+
+  .login-brand {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .login-brand__logo-shell {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+  }
+
+  .login-brand__logo {
+    width: 46px;
+    height: 46px;
+  }
+
+  .login-brand__name {
+    font-size: 18px;
   }
 }
 </style>

@@ -113,6 +113,13 @@ onBeforeUnmount(() => {
   <div v-if="isMobile && isSidebarOpen" class="app-overlay" @click="closeMobileSidebar"></div>
 
   <el-container class="app-shell" :class="{ 'app-shell--mobile': isMobile }">
+    <div class="app-shell__ambient">
+      <div class="app-shell__orb app-shell__orb--mint"></div>
+      <div class="app-shell__orb app-shell__orb--blue"></div>
+      <div class="app-shell__orb app-shell__orb--peach"></div>
+      <div class="app-shell__grain"></div>
+    </div>
+
     <el-aside
       :class="['app-aside', sidebarClasses]"
       :width="isMobile ? '280px' : isSidebarCollapsed ? '92px' : '260px'"

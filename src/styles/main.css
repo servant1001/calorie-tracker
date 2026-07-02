@@ -9,6 +9,8 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --font-display: 'Aptos Display', 'Segoe UI', 'Noto Sans TC', 'PingFang TC', sans-serif;
+  --font-body: 'Aptos', 'Segoe UI', 'Noto Sans TC', 'PingFang TC', sans-serif;
   --shell-bg: rgba(255, 255, 255, 0.72);
   --shell-border: rgba(36, 50, 51, 0.08);
   --accent: #2d7a56;
@@ -34,16 +36,76 @@ body,
 body {
   margin: 0;
   color: var(--text-main);
+  font-family: var(--font-body);
+  line-height: 1.55;
+  background:
+    radial-gradient(circle at 14% 12%, rgba(123, 214, 175, 0.24), transparent 22%),
+    radial-gradient(circle at 86% 18%, rgba(123, 185, 255, 0.2), transparent 24%),
+    radial-gradient(circle at 72% 82%, rgba(255, 206, 148, 0.18), transparent 22%),
+    linear-gradient(180deg, #f9fcf7 0%, #f1f5ef 48%, #eef4f3 100%);
+  background-attachment: fixed;
 }
 
 a {
   color: var(--accent);
   text-decoration: none;
+  transition: color 0.2s ease, opacity 0.2s ease;
 }
 
 .app-shell {
   min-height: 100vh;
   position: relative;
+  isolation: isolate;
+}
+
+.app-shell__ambient {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app-shell__orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(18px);
+  opacity: 0.9;
+}
+
+.app-shell__orb--mint {
+  top: -80px;
+  left: -60px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(120, 217, 174, 0.28), rgba(120, 217, 174, 0));
+}
+
+.app-shell__orb--blue {
+  top: 10%;
+  right: -120px;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(116, 176, 255, 0.24), rgba(116, 176, 255, 0));
+}
+
+.app-shell__orb--peach {
+  bottom: -140px;
+  left: 26%;
+  width: 340px;
+  height: 340px;
+  background: radial-gradient(circle, rgba(255, 208, 161, 0.22), rgba(255, 208, 161, 0));
+}
+
+.app-shell__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.8) 0.7px, transparent 0.7px),
+    radial-gradient(rgba(36, 50, 51, 0.28) 0.55px, transparent 0.55px);
+  background-position: 0 0, 14px 14px;
+  background-size: 28px 28px;
 }
 
 .app-aside {
@@ -65,6 +127,8 @@ a {
 
 .app-content-shell {
   min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .app-overlay {
@@ -142,16 +206,19 @@ a {
 .hero-panel h3,
 .auth-card h1 {
   margin: 0;
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
 }
 
 .brand-kicker,
 .page-kicker,
 .section-kicker {
   margin: 0 0 8px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
+  opacity: 0.92;
 }
 
 .brand-copy,
@@ -294,6 +361,15 @@ a {
 .side-menu .el-menu-item {
   border-radius: 14px;
   margin-bottom: 8px;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.side-menu .el-menu-item:hover {
+  transform: translateX(2px);
+  background: rgba(255, 255, 255, 0.36);
 }
 
 .side-menu .el-menu-item.is-active {
@@ -324,8 +400,30 @@ a {
   color: var(--text-muted);
 }
 
+.page-kicker,
+.card-subtitle,
+.section-copy,
+.brand-copy,
+.account-copy span,
+.account-panel__label {
+  letter-spacing: -0.01em;
+}
+
 .app-main {
+  position: relative;
   padding: 24px 28px 28px;
+  z-index: 1;
+}
+
+.app-main::before {
+  content: '';
+  position: absolute;
+  inset: 8px 16px 16px;
+  border-radius: 36px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .page-stack {
@@ -412,6 +510,7 @@ a {
   margin: 6px 0 0;
   color: var(--text-muted);
   font-size: 14px;
+  line-height: 1.6;
 }
 
 .action-group,
@@ -516,6 +615,8 @@ a {
 
 .hero-stat-card strong {
   font-size: 28px;
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
 }
 
 .section-copy--dark {
@@ -668,11 +769,12 @@ a {
 }
 
 .journal-table .el-table__row {
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
 
 .journal-table .el-table__row:hover {
   transform: translateY(-1px);
+  filter: saturate(105%);
 }
 
 .journal-table .el-tag {
@@ -816,6 +918,8 @@ a {
 
 .summary-block strong {
   font-size: 28px;
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
 }
 
 .progress-card {
@@ -871,6 +975,67 @@ a {
 .auth-link {
   display: inline-block;
   margin-top: 16px;
+}
+
+.el-button {
+  border-radius: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.el-button:hover {
+  transform: translateY(-1px);
+}
+
+.el-button.is-plain,
+.el-button:not(.is-text):not(.is-link) {
+  box-shadow:
+    0 12px 24px rgba(33, 58, 55, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+.el-button--primary,
+.el-button--success {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.el-tag {
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.page-stack > * {
+  animation: fade-up 0.45s ease both;
+}
+
+.page-stack > *:nth-child(2) {
+  animation-delay: 0.04s;
+}
+
+.page-stack > *:nth-child(3) {
+  animation-delay: 0.08s;
+}
+
+.page-stack > *:nth-child(4) {
+  animation-delay: 0.12s;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 992px) {
@@ -931,7 +1096,7 @@ a {
 
 @media (max-width: 640px) {
   .app-main {
-    padding: 18px 14px 24px;
+    padding: 16px 12px 22px;
   }
 
   .content-card,
@@ -940,7 +1105,7 @@ a {
   }
 
   .hero-panel {
-    padding: 20px;
+    padding: 18px;
     border-radius: 22px;
   }
 
@@ -958,5 +1123,22 @@ a {
 
   .app-header__group {
     width: 100%;
+  }
+
+  .app-main::before {
+    inset: 4px 4px 10px;
+    border-radius: 24px;
+  }
+
+  .page-stack {
+    gap: 14px;
+  }
+
+  .card-header {
+    gap: 10px;
+  }
+
+  .card-subtitle {
+    font-size: 13px;
   }
 }

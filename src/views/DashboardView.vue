@@ -420,43 +420,67 @@ onMounted(async () => {
 <template>
   <div class="page-stack dashboard-page">
     <section class="dashboard-hero">
+      <div class="dashboard-hero__glow dashboard-hero__glow--a"></div>
+      <div class="dashboard-hero__glow dashboard-hero__glow--b"></div>
+
       <div class="dashboard-hero__content">
-        <p class="section-kicker">Today Health Snapshot</p>
+        <div class="dashboard-hero__eyebrow">
+          <span class="dashboard-hero__pill">
+            <Sparkles :size="14" />
+            Today Health Snapshot
+          </span>
+          <span class="dashboard-hero__date">{{ today }}</span>
+        </div>
+
         <h3>{{ greeting }}，{{ displayName }}</h3>
         <p class="section-copy section-copy--dark">
           今天也朝健康邁進一步。先看熱量進度，再決定接下來要補充飲食還是安排運動。
         </p>
 
-        <div class="hero-note">
-          <Sparkles :size="18" />
-          <span>{{ remainingMessage }}</span>
-        </div>
+        <div class="hero-notes">
+          <div class="hero-note">
+            <Sparkles :size="18" />
+            <span>{{ remainingMessage }}</span>
+          </div>
 
-        <div v-if="isTodayDeficit" class="hero-note hero-note--deficit">
-          <Target :size="18" />
-          <span>{{ deficitMessage }}</span>
+          <div v-if="isTodayDeficit" class="hero-note hero-note--deficit">
+            <Target :size="18" />
+            <span>{{ deficitMessage }}</span>
+          </div>
         </div>
 
         <div class="hero-meta">
-          <article class="hero-meta-card">
+          <article class="hero-meta-card hero-meta-card--goal">
+            <div class="hero-meta-card__icon">
+              <Target :size="18" />
+            </div>
             <span>今日目標</span>
             <strong>{{ dailyGoal }} kcal</strong>
             <p>{{ activityLevelLabelMap[profileStore.profile.activityLevel] }}</p>
           </article>
 
-          <article class="hero-meta-card">
+          <article class="hero-meta-card hero-meta-card--exercise">
+            <div class="hero-meta-card__icon">
+              <Dumbbell :size="18" />
+            </div>
             <span>運動消耗目標</span>
             <strong>{{ dailyExerciseGoal }} kcal</strong>
             <p>右側狀態環會顯示今日達成率</p>
           </article>
 
-          <article class="hero-meta-card">
+          <article class="hero-meta-card hero-meta-card--bmr">
+            <div class="hero-meta-card__icon">
+              <Flame :size="18" />
+            </div>
             <span>基礎代謝 BMR</span>
             <strong>{{ summary.basalBurn }} kcal</strong>
             <p>今日總消耗已含基礎代謝</p>
           </article>
 
-          <article class="hero-meta-card">
+          <article class="hero-meta-card hero-meta-card--weight">
+            <div class="hero-meta-card__icon">
+              <Scale :size="18" />
+            </div>
             <span>目前體重</span>
             <strong>{{ summary.currentWeight }} kg</strong>
             <p>{{ weightMessage }}</p>
@@ -464,33 +488,109 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="dashboard-hero__ring">
-        <div
-          class="calorie-ring"
-          :style="{
-            '--progress': `${exerciseGoalPercent}%`,
-            '--ring-color': ringTone,
-          }"
-        >
-          <div class="calorie-ring__inner">
-            <span>{{ exerciseGoalPercent }}%</span>
-            <strong>{{ exerciseGoalLabel }}</strong>
-            <p>{{ exerciseGoalDetail }}</p>
+      <div class="dashboard-hero__ring-shell">
+        <div class="dashboard-hero__ring-copy">
+          <span>今日運動目標</span>
+          <strong>{{ exerciseGoalPercent }}%</strong>
+          <p>{{ exerciseGoalDetail }}</p>
+        </div>
+
+        <div class="dashboard-hero__ring">
+          <div
+            class="calorie-ring"
+            :style="{
+              '--progress': `${exerciseGoalPercent}%`,
+              '--ring-color': ringTone,
+            }"
+          >
+            <div class="calorie-ring__inner">
+              <span>{{ exerciseGoalPercent }}%</span>
+              <strong>{{ exerciseGoalLabel }}</strong>
+              <p>{{ exerciseGoalDetail }}</p>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <el-card shadow="hover" class="content-card dashboard-section">
+    <section class="dashboard-kpi-grid">
+      <article
+        v-for="card in statCards"
+        :key="card.label"
+        :class="['dashboard-kpi', `dashboard-kpi--${card.tone}`]"
+      >
+        <div class="dashboard-kpi__top">
+          <div class="dashboard-kpi__icon">
+            <component :is="card.icon" :size="20" />
+          </div>
+          <p>{{ card.label }}</p>
+        </div>
+
+        <div class="dashboard-kpi__value">
+          <strong>{{ card.value }}</strong>
+          <span>{{ card.unit }}</span>
+        </div>
+
+        <small class="dashboard-kpi__note">{{ card.note }}</small>
+      </article>
+    </section>
+
+    <section class="quick-actions">
+      <button type="button" class="quick-action-card quick-action-card--green" @click="router.push('/foods')">
+        <div class="quick-action-card__icon quick-action-card__icon--green">
+          <Salad :size="20" />
+        </div>
+        <div>
+          <span class="quick-action-card__eyebrow">Nutrition Log</span>
+          <strong>新增飲食</strong>
+          <p>快速記錄今天吃了什麼</p>
+        </div>
+        <ArrowRight :size="18" />
+      </button>
+
+      <button type="button" class="quick-action-card quick-action-card--blue" @click="router.push('/exercises')">
+        <div class="quick-action-card__icon quick-action-card__icon--blue">
+          <Dumbbell :size="20" />
+        </div>
+        <div>
+          <span class="quick-action-card__eyebrow">Workout Log</span>
+          <strong>新增運動</strong>
+          <p>補上運動時間與消耗熱量</p>
+        </div>
+        <ArrowRight :size="18" />
+      </button>
+
+      <button type="button" class="quick-action-card quick-action-card--rose" @click="router.push('/weights')">
+        <div class="quick-action-card__icon quick-action-card__icon--rose">
+          <Scale :size="20" />
+        </div>
+        <div>
+          <span class="quick-action-card__eyebrow">Body Check</span>
+          <strong>新增體重</strong>
+          <p>追蹤近期變化與目標距離</p>
+        </div>
+        <ArrowRight :size="18" />
+      </button>
+    </section>
+
+    <el-card shadow="hover" class="content-card dashboard-section dashboard-section--chart">
       <template #header>
-        <div class="card-header">
+        <div class="card-header card-header--chart">
           <div>
             <span>本週熱量趨勢</span>
             <p class="card-subtitle">用攝取、總消耗、運動消耗與目標線快速判斷這週節奏。</p>
           </div>
+
+          <div class="chart-header-badge">
+            <Activity :size="16" />
+            <span>{{ weeklyDeficitDays.length }} 天達成赤字</span>
+          </div>
         </div>
       </template>
-      <StatisticsChart :option="chartOption" />
+
+      <div class="chart-panel">
+        <StatisticsChart :option="chartOption" />
+      </div>
 
       <div v-if="weeklyDeficitDays.length" class="deficit-strip">
         <span class="deficit-strip__label">本週已達成熱量赤字</span>
@@ -506,171 +606,183 @@ onMounted(async () => {
       </div>
     </el-card>
 
-    <el-row :gutter="16">
-      <el-col v-for="card in statCards" :key="card.label" :xs="12" :sm="12" :lg="6">
-        <article :class="['dashboard-kpi', `dashboard-kpi--${card.tone}`]">
-          <div class="dashboard-kpi__icon">
-            <component :is="card.icon" :size="20" />
-          </div>
-          <p>{{ card.label }}</p>
-          <strong>{{ card.value }}</strong>
-          <span>{{ card.unit }}</span>
-          <small class="dashboard-kpi__note">{{ card.note }}</small>
-        </article>
-      </el-col>
-    </el-row>
+    <section class="dashboard-records">
+      <el-row :gutter="16">
+        <el-col :xs="24" :xl="8">
+          <el-card shadow="hover" class="content-card dashboard-section dashboard-record-card">
+            <template #header>
+              <div class="card-header">
+                <div>
+                  <span>今日飲食</span>
+                  <p class="card-subtitle">最多顯示 4 筆今日飲食紀錄</p>
+                </div>
+                <el-button type="primary" plain @click="router.push('/foods')">查看全部</el-button>
+              </div>
+            </template>
 
-    <section class="quick-actions">
-      <button type="button" class="quick-action-card" @click="router.push('/foods')">
-        <div class="quick-action-card__icon quick-action-card__icon--green">
-          <Salad :size="20" />
-        </div>
-        <div>
-          <strong>新增飲食</strong>
-          <p>快速記錄今天吃了什麼</p>
-        </div>
-        <ArrowRight :size="18" />
-      </button>
+            <div v-if="todayFoods.length" class="record-list">
+              <article v-for="food in todayFoods" :key="food.id" class="record-item">
+                <div class="record-item__icon record-item__icon--warm">
+                  <Salad :size="18" />
+                </div>
+                <div class="record-item__content">
+                  <strong>{{ food.foodName }}</strong>
+                  <p>{{ mealLabelMap[food.mealType] }} · {{ food.quantity }} {{ food.unit }}</p>
+                </div>
+                <div class="record-item__metric">
+                  <strong>{{ food.totalCalories }}</strong>
+                  <span>kcal</span>
+                </div>
+              </article>
+            </div>
 
-      <button type="button" class="quick-action-card" @click="router.push('/exercises')">
-        <div class="quick-action-card__icon quick-action-card__icon--blue">
-          <Dumbbell :size="20" />
-        </div>
-        <div>
-          <strong>新增運動</strong>
-          <p>補上運動時間與消耗熱量</p>
-        </div>
-        <ArrowRight :size="18" />
-      </button>
+            <el-empty v-else description="今天還沒有飲食紀錄" />
+          </el-card>
+        </el-col>
 
-      <button type="button" class="quick-action-card" @click="router.push('/weights')">
-        <div class="quick-action-card__icon quick-action-card__icon--rose">
-          <Scale :size="20" />
-        </div>
-        <div>
-          <strong>新增體重</strong>
-          <p>追蹤近期變化與目標距離</p>
-        </div>
-        <ArrowRight :size="18" />
-      </button>
+        <el-col :xs="24" :xl="8">
+          <el-card shadow="hover" class="content-card dashboard-section dashboard-record-card">
+            <template #header>
+              <div class="card-header">
+                <div>
+                  <span>今日運動</span>
+                  <p class="card-subtitle">最多顯示 4 筆今日運動紀錄</p>
+                </div>
+                <el-button type="success" plain @click="router.push('/exercises')">查看全部</el-button>
+              </div>
+            </template>
+
+            <div v-if="todayExercises.length" class="record-list">
+              <article v-for="exercise in todayExercises" :key="exercise.id" class="record-item">
+                <div class="record-item__icon record-item__icon--cool">
+                  <Dumbbell :size="18" />
+                </div>
+                <div class="record-item__content">
+                  <strong>{{ exercise.exerciseName }}</strong>
+                  <p>{{ exercise.durationMinutes }} 分鐘</p>
+                </div>
+                <div class="record-item__metric">
+                  <strong>{{ exercise.totalCalories }}</strong>
+                  <span>kcal</span>
+                </div>
+              </article>
+            </div>
+
+            <el-empty v-else description="今天還沒有運動紀錄" />
+          </el-card>
+        </el-col>
+
+        <el-col :xs="24" :xl="8">
+          <el-card shadow="hover" class="content-card dashboard-section dashboard-record-card">
+            <template #header>
+              <div class="card-header">
+                <div>
+                  <span>近期體重</span>
+                  <p class="card-subtitle">顯示最新 4 筆體重紀錄</p>
+                </div>
+                <el-button plain @click="router.push('/weights')">查看全部</el-button>
+              </div>
+            </template>
+
+            <div v-if="latestWeights.length" class="record-list">
+              <article v-for="item in latestWeights" :key="item.id" class="record-item">
+                <div class="record-item__icon record-item__icon--neutral">
+                  <TrendingUp :size="18" />
+                </div>
+                <div class="record-item__content">
+                  <strong>{{ item.weight }} kg</strong>
+                  <p>{{ item.recordDate }}</p>
+                </div>
+                <div class="record-item__metric">
+                  <strong>{{ profileStore.profile.height ? Math.round((item.weight / ((profileStore.profile.height / 100) ** 2)) * 10) / 10 : '--' }}</strong>
+                  <span>BMI</span>
+                </div>
+              </article>
+            </div>
+
+            <el-empty v-else description="目前還沒有體重紀錄" />
+          </el-card>
+        </el-col>
+      </el-row>
     </section>
-
-    <el-row :gutter="16">
-      <el-col :xs="24" :xl="8">
-        <el-card shadow="hover" class="content-card dashboard-section">
-          <template #header>
-            <div class="card-header">
-              <div>
-                <span>今日飲食</span>
-                <p class="card-subtitle">最多顯示 4 筆今日飲食紀錄</p>
-              </div>
-              <el-button type="primary" plain @click="router.push('/foods')">查看全部</el-button>
-            </div>
-          </template>
-
-          <div v-if="todayFoods.length" class="record-list">
-            <article v-for="food in todayFoods" :key="food.id" class="record-item">
-              <div class="record-item__icon record-item__icon--warm">
-                <Salad :size="18" />
-              </div>
-              <div class="record-item__content">
-                <strong>{{ food.foodName }}</strong>
-                <p>{{ mealLabelMap[food.mealType] }} · {{ food.quantity }} {{ food.unit }}</p>
-              </div>
-              <div class="record-item__metric">
-                <strong>{{ food.totalCalories }}</strong>
-                <span>kcal</span>
-              </div>
-            </article>
-          </div>
-
-          <el-empty v-else description="今天還沒有飲食紀錄" />
-        </el-card>
-      </el-col>
-
-      <el-col :xs="24" :xl="8">
-        <el-card shadow="hover" class="content-card dashboard-section">
-          <template #header>
-            <div class="card-header">
-              <div>
-                <span>今日運動</span>
-                <p class="card-subtitle">最多顯示 4 筆今日運動紀錄</p>
-              </div>
-              <el-button type="success" plain @click="router.push('/exercises')">查看全部</el-button>
-            </div>
-          </template>
-
-          <div v-if="todayExercises.length" class="record-list">
-            <article v-for="exercise in todayExercises" :key="exercise.id" class="record-item">
-              <div class="record-item__icon record-item__icon--cool">
-                <Dumbbell :size="18" />
-              </div>
-              <div class="record-item__content">
-                <strong>{{ exercise.exerciseName }}</strong>
-                <p>{{ exercise.durationMinutes }} 分鐘</p>
-              </div>
-              <div class="record-item__metric">
-                <strong>{{ exercise.totalCalories }}</strong>
-                <span>kcal</span>
-              </div>
-            </article>
-          </div>
-
-          <el-empty v-else description="今天還沒有運動紀錄" />
-        </el-card>
-      </el-col>
-
-      <el-col :xs="24" :xl="8">
-        <el-card shadow="hover" class="content-card dashboard-section">
-          <template #header>
-            <div class="card-header">
-              <div>
-                <span>近期體重</span>
-                <p class="card-subtitle">顯示最新 4 筆體重紀錄</p>
-              </div>
-              <el-button plain @click="router.push('/weights')">查看全部</el-button>
-            </div>
-          </template>
-
-          <div v-if="latestWeights.length" class="record-list">
-            <article v-for="item in latestWeights" :key="item.id" class="record-item">
-              <div class="record-item__icon record-item__icon--neutral">
-                <TrendingUp :size="18" />
-              </div>
-              <div class="record-item__content">
-                <strong>{{ item.weight }} kg</strong>
-                <p>{{ item.recordDate }}</p>
-              </div>
-              <div class="record-item__metric">
-                <strong>{{ profileStore.profile.height ? Math.round((item.weight / ((profileStore.profile.height / 100) ** 2)) * 10) / 10 : '--' }}</strong>
-                <span>BMI</span>
-              </div>
-            </article>
-          </div>
-
-          <el-empty v-else description="目前還沒有體重紀錄" />
-        </el-card>
-      </el-col>
-    </el-row>
   </div>
 </template>
 
 <style scoped>
 .dashboard-page {
-  gap: 20px;
+  gap: 22px;
 }
 
 .dashboard-hero {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(280px, 360px);
   gap: 24px;
   align-items: center;
-  padding: 30px;
-  border-radius: 30px;
-  background:
-    radial-gradient(circle at top right, rgba(77, 163, 255, 0.18), transparent 24%),
-    linear-gradient(135deg, #f8fff8 0%, #eef7ec 52%, #fff8eb 100%);
-  border: 1px solid rgba(45, 122, 86, 0.1);
+  padding: 34px;
+  border-radius: 34px;
+  background: linear-gradient(135deg, rgba(248, 255, 248, 0.96) 0%, rgba(238, 247, 236, 0.94) 40%, rgba(255, 248, 235, 0.96) 100%);
+  border: 1px solid rgba(45, 122, 86, 0.12);
+  box-shadow:
+    0 26px 60px rgba(33, 58, 55, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  overflow: hidden;
+}
+
+.dashboard-hero__glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.dashboard-hero__glow--a {
+  top: -64px;
+  right: 12%;
+  width: 220px;
+  height: 220px;
+  background: rgba(77, 163, 255, 0.14);
+}
+
+.dashboard-hero__glow--b {
+  bottom: -96px;
+  left: -32px;
+  width: 260px;
+  height: 260px;
+  background: rgba(80, 203, 151, 0.12);
+}
+
+.dashboard-hero__content,
+.dashboard-hero__ring-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-hero__eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.dashboard-hero__pill,
+.dashboard-hero__date {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(36, 50, 51, 0.08);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dashboard-hero__date {
+  color: var(--text-muted);
 }
 
 .dashboard-hero__content h3 {
@@ -679,37 +791,94 @@ onMounted(async () => {
   line-height: 1.1;
 }
 
+.hero-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 22px;
+}
+
 .hero-note {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-top: 18px;
-  padding: 12px 16px;
+  min-height: 48px;
+  padding: 0 18px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(36, 50, 51, 0.08);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.26));
+  border: 1px solid rgba(255, 255, 255, 0.46);
   color: var(--text-main);
+  box-shadow:
+    0 18px 36px rgba(33, 58, 55, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(140%);
 }
 
 .hero-note--deficit {
-  margin-left: 12px;
-  background: rgba(45, 122, 86, 0.12);
-  border-color: rgba(45, 122, 86, 0.18);
-  color: var(--accent);
+  background: linear-gradient(135deg, rgba(255, 232, 238, 0.72), rgba(255, 218, 229, 0.38));
+  border-color: rgba(255, 255, 255, 0.42);
+  color: #8f1239;
 }
 
 .hero-meta {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 14px;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .hero-meta-card {
-  padding: 18px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.76);
-  border: 1px solid rgba(36, 50, 51, 0.08);
+  position: relative;
+  padding: 18px 18px 18px 62px;
+  border-radius: 24px;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.18));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 22px 42px rgba(33, 58, 55, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(24px) saturate(145%);
+  overflow: hidden;
+}
+
+.hero-meta-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.04) 58%);
+  pointer-events: none;
+}
+
+.hero-meta-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-meta-card__icon {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--text-main);
+}
+
+.hero-meta-card--goal .hero-meta-card__icon {
+  background: #e9f8e8;
+}
+
+.hero-meta-card--exercise .hero-meta-card__icon {
+  background: #e9f4ff;
+}
+
+.hero-meta-card--bmr .hero-meta-card__icon {
+  background: #fff0e1;
+}
+
+.hero-meta-card--weight .hero-meta-card__icon {
+  background: #f1eeff;
 }
 
 .hero-meta-card span,
@@ -733,6 +902,46 @@ onMounted(async () => {
 }
 
 .hero-meta-card p {
+  margin: 8px 0 0;
+}
+
+.dashboard-hero__ring-shell {
+  padding: 24px;
+  border-radius: 30px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.18));
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  box-shadow:
+    0 24px 48px rgba(33, 58, 55, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(28px) saturate(150%);
+}
+
+.dashboard-hero__ring-copy {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.dashboard-hero__ring-copy span,
+.dashboard-hero__ring-copy p {
+  color: var(--text-muted);
+}
+
+.dashboard-hero__ring-copy span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dashboard-hero__ring-copy strong {
+  display: block;
+  font-size: clamp(30px, 5vw, 42px);
+  line-height: 1;
+}
+
+.dashboard-hero__ring-copy p {
   margin: 8px 0 0;
 }
 
@@ -783,8 +992,67 @@ onMounted(async () => {
   color: var(--text-muted);
 }
 
+.dashboard-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .dashboard-section {
   overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0.18));
+  box-shadow:
+    0 24px 48px rgba(33, 58, 55, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(26px) saturate(145%);
+}
+
+.dashboard-section--chart {
+  position: relative;
+}
+
+.dashboard-section--chart::before,
+.dashboard-record-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05) 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dashboard-section :deep(.el-card__header),
+.dashboard-section :deep(.el-card__body) {
+  position: relative;
+  z-index: 1;
+}
+
+.card-header--chart {
+  gap: 16px;
+}
+
+.chart-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 234, 240, 0.72), rgba(255, 226, 234, 0.34));
+  color: #8f1239;
+  border: 1px solid rgba(255, 255, 255, 0.46);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow:
+    0 12px 24px rgba(143, 18, 57, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+.chart-panel {
+  margin: 0 -2px;
 }
 
 .deficit-strip {
@@ -814,11 +1082,15 @@ onMounted(async () => {
   min-height: 34px;
   padding: 0 12px;
   border-radius: 999px;
-  background: #ffe4ea;
+  background: linear-gradient(135deg, rgba(255, 233, 239, 0.78), rgba(255, 218, 229, 0.42));
   color: #8f1239;
-  border: 1px solid rgba(190, 24, 93, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.48);
   font-size: 13px;
   font-weight: 700;
+  box-shadow:
+    0 10px 20px rgba(143, 18, 57, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(135%);
 }
 
 .dashboard-kpi {
@@ -826,19 +1098,46 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 188px;
-  padding: 22px;
+  min-height: 208px;
+  padding: 24px;
   border-radius: 24px;
-  border: 1px solid rgba(36, 50, 51, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.46);
   transition:
     transform 0.25s ease,
-    box-shadow 0.25s ease;
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+  box-shadow:
+    0 22px 40px rgba(33, 58, 55, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(24px) saturate(145%);
+  overflow: hidden;
+}
+
+.dashboard-kpi::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.06) 60%);
+  pointer-events: none;
+}
+
+.dashboard-kpi > * {
+  position: relative;
+  z-index: 1;
 }
 
 .dashboard-kpi:hover,
 .quick-action-card:hover,
 .record-item:hover {
   transform: translateY(-2px);
+  box-shadow: 0 22px 38px rgba(33, 58, 55, 0.09);
+}
+
+.dashboard-kpi__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .dashboard-kpi__icon {
@@ -847,7 +1146,16 @@ onMounted(async () => {
   border-radius: 14px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.6);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.34));
+  border: 1px solid rgba(255, 255, 255, 0.44);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.dashboard-kpi__value {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 22px;
 }
 
 .dashboard-kpi strong {
@@ -863,19 +1171,19 @@ onMounted(async () => {
 }
 
 .dashboard-kpi--warm {
-  background: #fff0e1;
+  background: linear-gradient(145deg, rgba(255, 240, 225, 0.7), rgba(255, 227, 197, 0.3));
 }
 
 .dashboard-kpi--cool {
-  background: #e9f4ff;
+  background: linear-gradient(145deg, rgba(233, 244, 255, 0.7), rgba(211, 233, 255, 0.3));
 }
 
 .dashboard-kpi--violet {
-  background: #f1eeff;
+  background: linear-gradient(145deg, rgba(241, 238, 255, 0.72), rgba(224, 216, 255, 0.32));
 }
 
 .dashboard-kpi--fresh {
-  background: #e9f8e8;
+  background: linear-gradient(145deg, rgba(233, 248, 232, 0.72), rgba(214, 243, 213, 0.32));
 }
 
 .quick-actions {
@@ -885,26 +1193,70 @@ onMounted(async () => {
 }
 
 .quick-action-card {
+  position: relative;
   width: 100%;
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 14px;
   align-items: center;
   padding: 18px 20px;
-  border: 1px solid rgba(36, 50, 51, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.48);
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.82);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.18));
   color: var(--text-main);
   cursor: pointer;
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
     border-color 0.2s ease;
+  overflow: hidden;
+  box-shadow:
+    0 22px 40px rgba(33, 58, 55, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(24px) saturate(145%);
+}
+
+.quick-action-card::after {
+  content: '';
+  position: absolute;
+  inset: auto -30px -30px auto;
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.quick-action-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.04) 58%);
+  pointer-events: none;
 }
 
 .quick-action-card:hover {
-  border-color: rgba(45, 122, 86, 0.18);
-  box-shadow: 0 16px 32px rgba(36, 50, 51, 0.06);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 26px 44px rgba(33, 58, 55, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.quick-action-card--green {
+  background: linear-gradient(145deg, rgba(241, 255, 240, 0.54), rgba(218, 245, 217, 0.2));
+}
+
+.quick-action-card--blue {
+  background: linear-gradient(145deg, rgba(241, 249, 255, 0.54), rgba(220, 238, 255, 0.2));
+}
+
+.quick-action-card--rose {
+  background: linear-gradient(145deg, rgba(255, 246, 249, 0.56), rgba(255, 227, 237, 0.22));
+}
+
+.quick-action-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .quick-action-card strong {
@@ -912,6 +1264,16 @@ onMounted(async () => {
   margin-bottom: 4px;
   font-size: 18px;
   text-align: left;
+}
+
+.quick-action-card__eyebrow {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .quick-action-card p {
@@ -926,18 +1288,20 @@ onMounted(async () => {
   border-radius: 14px;
   display: grid;
   place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .quick-action-card__icon--green {
-  background: #e9f8e8;
+  background: linear-gradient(145deg, rgba(233, 248, 232, 0.86), rgba(210, 240, 209, 0.46));
 }
 
 .quick-action-card__icon--blue {
-  background: #e9f4ff;
+  background: linear-gradient(145deg, rgba(233, 244, 255, 0.86), rgba(211, 233, 255, 0.46));
 }
 
 .quick-action-card__icon--rose {
-  background: #fff0f3;
+  background: linear-gradient(145deg, rgba(255, 240, 243, 0.88), rgba(255, 219, 230, 0.48));
 }
 
 .record-list {
@@ -946,16 +1310,27 @@ onMounted(async () => {
   gap: 12px;
 }
 
+.dashboard-record-card {
+  min-height: 100%;
+}
+
 .record-item {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 14px;
   align-items: center;
   padding: 16px;
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(248, 251, 250, 0.9), rgba(243, 246, 244, 0.9));
-  border: 1px solid rgba(36, 50, 51, 0.06);
-  transition: transform 0.25s ease;
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.16));
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+  box-shadow:
+    0 16px 30px rgba(33, 58, 55, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(18px) saturate(140%);
 }
 
 .record-item__icon {
@@ -964,18 +1339,20 @@ onMounted(async () => {
   border-radius: 14px;
   display: grid;
   place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .record-item__icon--warm {
-  background: #fff0e1;
+  background: linear-gradient(145deg, rgba(255, 240, 225, 0.88), rgba(255, 222, 191, 0.46));
 }
 
 .record-item__icon--cool {
-  background: #e9f4ff;
+  background: linear-gradient(145deg, rgba(233, 244, 255, 0.88), rgba(210, 232, 255, 0.46));
 }
 
 .record-item__icon--neutral {
-  background: #f0f1f5;
+  background: linear-gradient(145deg, rgba(240, 241, 245, 0.9), rgba(223, 226, 235, 0.5));
 }
 
 .record-item__content strong,
@@ -998,9 +1375,8 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 
-  .hero-note--deficit {
-    margin-left: 0;
-    margin-top: 12px;
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1010,23 +1386,39 @@ onMounted(async () => {
     border-radius: 24px;
   }
 
-  .hero-meta {
+  .dashboard-hero__ring-shell {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .hero-meta,
+  .dashboard-kpi-grid {
     grid-template-columns: 1fr;
   }
 
-  /* Add vertical spacing for KPI cards when they wrap to multiple rows */
   .dashboard-kpi {
     min-height: 164px;
-    margin-bottom: 12px;
   }
 
-  /* Add vertical spacing between stacked rows (sections) on small screens */
-  .dashboard-page .el-row {
-    margin-top: 16px;
+  .card-header--chart {
+    align-items: flex-start;
+  }
+
+  .chart-header-badge {
+    align-self: flex-start;
   }
 }
 
 @media (max-width: 640px) {
+  .dashboard-page {
+    gap: 18px;
+  }
+
+  .hero-note {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .record-item {
     grid-template-columns: auto 1fr;
   }

@@ -136,8 +136,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page-stack">
-    <section class="hero-panel hero-panel--weights">
+  <div class="page-stack journal-page journal-page--weights">
+    <section class="hero-panel hero-panel--weights journal-hero">
       <div>
         <p class="section-kicker">Weight Journal</p>
         <h3>把體重變化和 BMI 一起看，進度更有感</h3>
@@ -158,7 +158,7 @@ onMounted(async () => {
       </div>
     </section>
 
-    <el-card shadow="hover" class="content-card">
+    <el-card shadow="hover" class="content-card journal-shell-card">
       <template #header>
         <div class="card-header">
           <div>
@@ -173,7 +173,7 @@ onMounted(async () => {
         </div>
       </template>
 
-      <div class="filters-panel filters-panel--rose">
+      <div class="filters-panel filters-panel--rose journal-filters">
         <div class="toolbar-grid toolbar-grid--foods">
           <el-date-picker
             v-model="filters.recordDate"
@@ -199,6 +199,7 @@ onMounted(async () => {
         v-loading="weightsStore.isLoading || profileStore.isLoading"
         :data="filteredRecords"
         stripe
+        class="journal-table"
         empty-text="目前沒有符合條件的體重紀錄"
       >
         <el-table-column prop="recordDate" label="日期" min-width="120" />
@@ -244,6 +245,7 @@ onMounted(async () => {
       v-model="isDialogVisible"
       :title="dialogTitle"
       width="min(680px, calc(100vw - 24px))"
+      class="journal-dialog"
       destroy-on-close
       @closed="resetForm"
     >

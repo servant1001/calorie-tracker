@@ -83,8 +83,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page-stack">
-    <section class="hero-panel hero-panel--settings">
+  <div class="page-stack journal-page settings-page">
+    <section class="hero-panel hero-panel--settings journal-hero settings-hero">
       <div>
         <p class="section-kicker">Profile Settings</p>
         <h3>把個人資料設定完整，後續分析才會更準</h3>
@@ -109,7 +109,7 @@ onMounted(async () => {
       </div>
     </section>
 
-    <el-card shadow="hover" class="content-card">
+    <el-card shadow="hover" class="content-card journal-shell-card settings-shell-card">
       <template #header>
         <div class="card-header">
           <div>
@@ -126,7 +126,7 @@ onMounted(async () => {
         :model="form"
         :rules="rules"
         label-position="top"
-        class="settings-grid"
+        class="settings-grid settings-form"
       >
         <el-form-item label="暱稱" prop="nickname">
           <el-input v-model="form.nickname" />

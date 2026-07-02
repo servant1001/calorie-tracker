@@ -147,8 +147,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page-stack">
-    <section class="hero-panel hero-panel--foods">
+  <div class="page-stack journal-page journal-page--foods">
+    <section class="hero-panel hero-panel--foods journal-hero">
       <div>
         <p class="section-kicker">Food Journal</p>
         <h3>把每天吃進去的熱量記得更清楚</h3>
@@ -169,7 +169,7 @@ onMounted(async () => {
       </div>
     </section>
 
-    <el-card shadow="hover" class="content-card">
+    <el-card shadow="hover" class="content-card journal-shell-card">
       <template #header>
         <div class="card-header">
           <div>
@@ -184,7 +184,7 @@ onMounted(async () => {
         </div>
       </template>
 
-      <div class="filters-panel">
+      <div class="filters-panel journal-filters">
         <div class="toolbar-grid toolbar-grid--foods">
           <el-date-picker
             v-model="filters.recordDate"
@@ -215,7 +215,7 @@ onMounted(async () => {
         </div>
       </div>
 
-      <el-table v-loading="foodsStore.isLoading" :data="filteredRecords" stripe class="foods-table" empty-text="目前沒有符合條件的飲食紀錄">
+      <el-table v-loading="foodsStore.isLoading" :data="filteredRecords" stripe class="foods-table journal-table" empty-text="目前沒有符合條件的飲食紀錄">
         <el-table-column prop="recordDate" label="日期" min-width="120" />
         <el-table-column label="餐別" min-width="110">
           <template #default="{ row }">
@@ -263,6 +263,7 @@ onMounted(async () => {
       v-model="isDialogVisible"
       :title="dialogTitle"
       width="min(720px, calc(100vw - 24px))"
+      class="journal-dialog"
       destroy-on-close
       @closed="resetForm"
     >

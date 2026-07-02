@@ -138,8 +138,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page-stack">
-    <section class="hero-panel hero-panel--exercises">
+  <div class="page-stack journal-page journal-page--exercises">
+    <section class="hero-panel hero-panel--exercises journal-hero">
       <div>
         <p class="section-kicker">Exercise Journal</p>
         <h3>把每天消耗出去的熱量也記得有脈絡</h3>
@@ -160,7 +160,7 @@ onMounted(async () => {
       </div>
     </section>
 
-    <el-card shadow="hover" class="content-card">
+    <el-card shadow="hover" class="content-card journal-shell-card">
       <template #header>
         <div class="card-header">
           <div>
@@ -175,7 +175,7 @@ onMounted(async () => {
         </div>
       </template>
 
-      <div class="filters-panel filters-panel--cool">
+      <div class="filters-panel filters-panel--cool journal-filters">
         <div class="toolbar-grid toolbar-grid--foods">
           <el-date-picker
             v-model="filters.recordDate"
@@ -198,7 +198,7 @@ onMounted(async () => {
         v-loading="exercisesStore.isLoading"
         :data="filteredRecords"
         stripe
-        class="foods-table"
+        class="foods-table journal-table"
         empty-text="目前沒有符合條件的運動紀錄"
       >
         <el-table-column prop="recordDate" label="日期" min-width="120" />
@@ -243,6 +243,7 @@ onMounted(async () => {
       v-model="isDialogVisible"
       :title="dialogTitle"
       width="min(720px, calc(100vw - 24px))"
+      class="journal-dialog"
       destroy-on-close
       @closed="resetForm"
     >

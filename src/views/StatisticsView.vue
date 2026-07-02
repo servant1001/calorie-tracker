@@ -183,8 +183,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page-stack">
-    <section class="hero-panel hero-panel--statistics">
+  <div class="page-stack journal-page statistics-page">
+    <section class="hero-panel hero-panel--statistics journal-hero statistics-hero">
       <div>
         <p class="section-kicker">Statistics</p>
         <h3>用圖表把每日熱量與體重趨勢看得更明白</h3>
@@ -215,7 +215,7 @@ onMounted(async () => {
 
     <el-row :gutter="16">
       <el-col :xs="24" :xl="16">
-        <el-card shadow="hover" class="content-card">
+        <el-card shadow="hover" class="content-card journal-shell-card statistics-shell-card">
           <template #header>
             <div class="card-header">
               <div>
@@ -231,7 +231,7 @@ onMounted(async () => {
       </el-col>
 
       <el-col :xs="24" :xl="8">
-        <el-card shadow="hover" class="content-card">
+        <el-card shadow="hover" class="content-card journal-shell-card statistics-shell-card">
           <template #header>
             <div class="card-header">
               <div>
@@ -242,19 +242,19 @@ onMounted(async () => {
           </template>
 
           <div class="summary-stack">
-            <article class="summary-block">
+            <article class="summary-block statistics-summary-block">
               <span>近 7 日平均攝取熱量</span>
               <strong>{{ weeklyAverageIntake }} kcal</strong>
             </article>
-            <article class="summary-block">
+            <article class="summary-block statistics-summary-block">
               <span>近 7 日平均消耗熱量</span>
               <strong>{{ weeklyAverageBurn }} kcal</strong>
             </article>
-            <article class="summary-block">
+            <article class="summary-block statistics-summary-block">
               <span>近 7 日平均運動消耗</span>
               <strong>{{ weeklyAverageExerciseBurn }} kcal</strong>
             </article>
-            <article class="summary-block">
+            <article class="summary-block statistics-summary-block">
               <span>近 30 日平均淨熱量</span>
               <strong>{{ monthlyAverageNet }} kcal</strong>
             </article>
@@ -263,7 +263,7 @@ onMounted(async () => {
       </el-col>
     </el-row>
 
-    <el-card shadow="hover" class="content-card">
+    <el-card shadow="hover" class="content-card journal-shell-card statistics-shell-card">
       <template #header>
         <div class="card-header">
           <div>

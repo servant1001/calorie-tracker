@@ -112,7 +112,11 @@ onBeforeUnmount(() => {
   <div v-if="isMobile && isSidebarOpen" class="app-overlay" @click="closeMobileSidebar"></div>
 
   <el-container class="app-shell" :class="{ 'app-shell--mobile': isMobile }">
-    <el-aside :class="['app-aside', sidebarClasses]" :width="isMobile ? '280px' : isSidebarCollapsed ? '92px' : '260px'">
+    <el-aside
+      :class="['app-aside', sidebarClasses]"
+      :width="isMobile ? '280px' : isSidebarCollapsed ? '92px' : '260px'"
+      @click.stop
+    >
       <div class="brand-block" :class="{ 'brand-block--compact': !isMobile && isSidebarCollapsed }">
         <p v-if="!isSidebarCollapsed || isMobile" class="brand-kicker">Daily wellness</p>
         <h1>{{ !isSidebarCollapsed || isMobile ? 'Calorie Tracker' : 'CT' }}</h1>

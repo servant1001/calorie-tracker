@@ -8,5 +8,6 @@ export interface UserProfile {
   weight: number
   targetWeight: number
   dailyGoal: number
+  dailyExerciseGoal: number
   activityLevel: ActivityLevel
 }

@@ -21,6 +21,7 @@ const form = reactive<UserProfile>({
   weight: 70,
   targetWeight: 65,
   dailyGoal: 2200,
+  dailyExerciseGoal: 300,
   activityLevel: 'medium',
 })
 
@@ -33,6 +34,7 @@ const rules: FormRules<UserProfile> = {
   weight: [{ required: true, message: '請輸入目前體重', trigger: 'blur' }],
   targetWeight: [{ required: true, message: '請輸入目標體重', trigger: 'blur' }],
   dailyGoal: [{ required: true, message: '請輸入每日目標熱量', trigger: 'blur' }],
+  dailyExerciseGoal: [{ required: true, message: '請輸入每日運動消耗目標', trigger: 'blur' }],
 }
 
 function syncFormFromProfile() {
@@ -87,7 +89,7 @@ onMounted(async () => {
         <p class="section-kicker">Profile Settings</p>
         <h3>把個人資料設定完整，後續分析才會更準</h3>
         <p class="section-copy section-copy--dark">
-          這裡會影響每日目標熱量、體重與 BMI 顯示，以及後續 TDEE、減脂增肌分析的基礎資料。
+          這裡會影響每日目標熱量、每日運動消耗目標、體重與 BMI 顯示，以及後續 TDEE、減脂增肌分析的基礎資料。
         </p>
       </div>
 
@@ -100,6 +102,10 @@ onMounted(async () => {
           <span>每日目標熱量</span>
           <strong>{{ form.dailyGoal }} kcal</strong>
         </article>
+        <article class="hero-stat-card hero-stat-card--cool">
+          <span>每日運動消耗目標</span>
+          <strong>{{ form.dailyExerciseGoal }} kcal</strong>
+        </article>
       </div>
     </section>
 
@@ -108,7 +114,7 @@ onMounted(async () => {
         <div class="card-header">
           <div>
             <span>個人設定</span>
-            <p class="card-subtitle">管理身高、體重、目標體重、活動量與每日目標熱量</p>
+            <p class="card-subtitle">管理身高、體重、目標體重、活動量、每日目標攝取熱量與每日運動消耗目標</p>
           </div>
           <el-button type="primary" plain :loading="isSubmitting" @click="handleSave">儲存設定</el-button>
         </div>
@@ -146,6 +152,11 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item label="每日目標熱量" prop="dailyGoal">
           <el-input-number v-model="form.dailyGoal" :min="800" :max="5000" />
+          <div class="card-subtitle">代表你每天希望攝取的熱量上限。</div>
+        </el-form-item>
+        <el-form-item label="每日運動消耗目標" prop="dailyExerciseGoal">
+          <el-input-number v-model="form.dailyExerciseGoal" :min="0" :max="3000" />
+          <div class="card-subtitle">代表你每天希望透過運動消耗的熱量。</div>
         </el-form-item>
         <el-form-item label="活動量" prop="activityLevel">
           <el-select v-model="form.activityLevel">

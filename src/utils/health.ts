@@ -1,3 +1,5 @@
+import type { UserProfile } from '@/types/profile'
+
 export function calculateBmi(weight: number, heightCm: number) {
   const heightInMeters = heightCm / 100
 
@@ -22,4 +24,25 @@ export function getBmiLabel(bmi: number) {
   }
 
   return '肥胖'
+}
+
+export function calculateBmr(profile: Pick<UserProfile, 'gender' | 'age' | 'height' | 'weight'>) {
+  const { age, height, weight, gender } = profile
+
+  if (!age || !height || !weight) {
+    return 0
+  }
+
+  const base = 10 * weight + 6.25 * height - 5 * age
+
+  if (gender === 'male') {
+    return Math.round(base + 5)
+  }
+
+  if (gender === 'female') {
+    return Math.round(base - 161)
+  }
+
+  // Infer a neutral adjustment for profiles that are not explicitly male/female.
+  return Math.round(base - 78)
 }

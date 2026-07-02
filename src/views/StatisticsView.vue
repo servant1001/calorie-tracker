@@ -6,16 +6,28 @@ import StatisticsChart from '@/components/StatisticsChart.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useExercisesStore } from '@/stores/exercises'
 import { useFoodsStore } from '@/stores/foods'
+import { useProfileStore } from '@/stores/profile'
 import { useWeightsStore } from '@/stores/weights'
+import { calculateBmr } from '@/utils/health'
 import { calculateAverage, buildDailyCalorieStats, buildWeightTrendStats, getLastItems } from '@/utils/statistics'
 import { showError } from '@/utils/message'
 
 const authStore = useAuthStore()
 const foodsStore = useFoodsStore()
 const exercisesStore = useExercisesStore()
+const profileStore = useProfileStore()
 const weightsStore = useWeightsStore()
 
-const calorieStats = computed(() => buildDailyCalorieStats(foodsStore.records, exercisesStore.records))
+const basalBurnPerDay = computed(() =>
+  calculateBmr({
+    ...profileStore.profile,
+    weight: weightsStore.latestWeight ?? profileStore.profile.weight,
+  }),
+)
+
+const calorieStats = computed(() =>
+  buildDailyCalorieStats(foodsStore.records, exercisesStore.records, basalBurnPerDay.value),
+)
 const weightStats = computed(() => buildWeightTrendStats(weightsStore.records))
 
 const last7Days = computed(() => getLastItems(calorieStats.value, 7))
@@ -23,6 +35,7 @@ const last30Days = computed(() => getLastItems(calorieStats.value, 30))
 
 const weeklyAverageIntake = computed(() => calculateAverage(last7Days.value.map((item) => item.intake)))
 const weeklyAverageBurn = computed(() => calculateAverage(last7Days.value.map((item) => item.burn)))
+const weeklyAverageExerciseBurn = computed(() => calculateAverage(last7Days.value.map((item) => item.exerciseBurn)))
 const monthlyAverageNet = computed(() => calculateAverage(last30Days.value.map((item) => item.net)))
 const latestWeight = computed(() => getLastItems(weightStats.value, 1)[0]?.weight ?? 0)
 
@@ -32,6 +45,7 @@ const calorieChartOption = computed<EChartsOption>(() => ({
   },
   legend: {
     top: 0,
+    data: ['攝取熱量', '基礎代謝 BMR', '總消耗', '淨熱量'],
   },
   grid: {
     left: 16,
@@ -64,7 +78,19 @@ const calorieChartOption = computed<EChartsOption>(() => ({
       },
     },
     {
-      name: '消耗熱量',
+      name: '基礎代謝 BMR',
+      type: 'line',
+      smooth: true,
+      symbol: 'none',
+      data: calorieStats.value.map((item) => item.basalBurn),
+      lineStyle: {
+        color: '#ffb454',
+        type: 'dashed',
+        width: 2,
+      },
+    },
+    {
+      name: '總消耗',
       type: 'bar',
       data: calorieStats.value.map((item) => item.burn),
       itemStyle: {
@@ -143,6 +169,7 @@ async function loadStatisticsData() {
     await Promise.all([
       foodsStore.fetchFoods(authStore.userId),
       exercisesStore.fetchExercises(authStore.userId),
+      profileStore.fetchProfile(authStore.userId),
       weightsStore.fetchWeights(authStore.userId),
     ])
   } catch (error) {
@@ -162,7 +189,7 @@ onMounted(async () => {
         <p class="section-kicker">Statistics</p>
         <h3>用圖表把每日熱量與體重趨勢看得更明白</h3>
         <p class="section-copy section-copy--dark">
-          這裡先整理每日攝取、消耗、淨熱量與體重變化，之後可以再延伸週報、月報與 AI 分析。
+          這裡先整理每日攝取、基礎代謝、總消耗、淨熱量與體重變化，之後可以再延伸週報、月報與 AI 分析。
         </p>
       </div>
 
@@ -172,7 +199,11 @@ onMounted(async () => {
           <strong>{{ weeklyAverageIntake }} kcal</strong>
         </article>
         <article class="hero-stat-card hero-stat-card--cool">
-          <span>近 7 日平均消耗</span>
+          <span>每日基礎代謝 BMR</span>
+          <strong>{{ basalBurnPerDay }} kcal</strong>
+        </article>
+        <article class="hero-stat-card">
+          <span>近 7 日平均總消耗</span>
           <strong>{{ weeklyAverageBurn }} kcal</strong>
         </article>
         <article class="hero-stat-card hero-stat-card--rose">
@@ -189,7 +220,7 @@ onMounted(async () => {
             <div class="card-header">
               <div>
                 <span>每日熱量統計</span>
-                <p class="card-subtitle">攝取、消耗與淨熱量的日別趨勢</p>
+                <p class="card-subtitle">攝取、BMR、總消耗與淨熱量的日別趨勢</p>
               </div>
               <el-tag type="success" effect="plain">近 {{ calorieStats.length }} 天</el-tag>
             </div>
@@ -218,6 +249,10 @@ onMounted(async () => {
             <article class="summary-block">
               <span>近 7 日平均消耗熱量</span>
               <strong>{{ weeklyAverageBurn }} kcal</strong>
+            </article>
+            <article class="summary-block">
+              <span>近 7 日平均運動消耗</span>
+              <strong>{{ weeklyAverageExerciseBurn }} kcal</strong>
             </article>
             <article class="summary-block">
               <span>近 30 日平均淨熱量</span>

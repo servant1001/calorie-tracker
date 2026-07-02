@@ -10,6 +10,6 @@ export function calculateNetCalories(totalIntake: number, totalBurn: number) {
   return totalIntake - totalBurn
 }
 
-export function calculateRemainingCalories(dailyGoal: number, netCalories: number) {
-  return dailyGoal - netCalories
+export function calculateRemainingCalories(dailyGoal: number, totalIntake: number) {
+  return dailyGoal - totalIntake
 }

@@ -10,7 +10,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   const netCalories = computed(() => totalIntake.value - totalBurn.value)
   const remainingCalories = computed(() =>
-    calculateRemainingCalories(dailyGoal.value, netCalories.value),
+    calculateRemainingCalories(dailyGoal.value, totalIntake.value),
   )
 
   return {

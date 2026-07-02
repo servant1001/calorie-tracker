@@ -23,6 +23,7 @@ import { useWeightsStore } from '@/stores/weights'
 import type { DashboardSummary } from '@/types/dashboard'
 import { calculateRemainingCalories } from '@/utils/calorie'
 import { formatDate } from '@/utils/date'
+import { calculateBmr } from '@/utils/health'
 import { showError } from '@/utils/message'
 
 const router = useRouter()
@@ -62,33 +63,43 @@ const latestWeights = computed(() =>
     .slice(0, 4),
 )
 
+const currentWeight = computed(() => weightsStore.latestWeight ?? profileStore.profile.weight)
+
 const summary = computed<DashboardSummary>(() => {
   const totalIntake = foodsStore.records
     .filter((record) => record.recordDate === today)
     .reduce((sum, record) => sum + record.totalCalories, 0)
-  const totalBurn = exercisesStore.records
+  const exerciseBurn = exercisesStore.records
     .filter((record) => record.recordDate === today)
     .reduce((sum, record) => sum + record.totalCalories, 0)
+  const basalBurn = calculateBmr({
+    ...profileStore.profile,
+    weight: currentWeight.value,
+  })
+  const totalBurn = basalBurn + exerciseBurn
   const netCalories = totalIntake - totalBurn
   const dailyGoal = profileStore.profile.dailyGoal || 2200
 
   return {
     totalIntake,
+    basalBurn,
+    exerciseBurn,
     totalBurn,
     netCalories,
-    remainingCalories: calculateRemainingCalories(dailyGoal, netCalories),
-    currentWeight: weightsStore.latestWeight ?? profileStore.profile.weight,
+    remainingCalories: calculateRemainingCalories(dailyGoal, totalIntake),
+    currentWeight: currentWeight.value,
   }
 })
 
 const dailyGoal = computed(() => profileStore.profile.dailyGoal || 2200)
+const dailyExerciseGoal = computed(() => profileStore.profile.dailyExerciseGoal || 300)
 
-const progressPercent = computed(() => {
-  if (!dailyGoal.value) {
+const exerciseGoalPercent = computed(() => {
+  if (!dailyExerciseGoal.value) {
     return 0
   }
 
-  return Math.max(0, Math.min(100, Math.round((summary.value.totalIntake / dailyGoal.value) * 100)))
+  return Math.max(0, Math.min(100, Math.round((summary.value.exerciseBurn / dailyExerciseGoal.value) * 100)))
 })
 
 const weightGap = computed(() =>
@@ -97,14 +108,52 @@ const weightGap = computed(() =>
 
 const remainingMessage = computed(() => {
   if (summary.value.remainingCalories > 0) {
-    return `距離今日目標還有 ${summary.value.remainingCalories} kcal`
+    return `今天還可以攝取 ${summary.value.remainingCalories} kcal`
   }
 
   if (summary.value.remainingCalories < 0) {
-    return `今日已超出 ${Math.abs(summary.value.remainingCalories)} kcal`
+    return `今天已超出攝取目標 ${Math.abs(summary.value.remainingCalories)} kcal`
   }
 
-  return '今天剛好達成目標熱量'
+  return '今天剛好達成攝取目標'
+})
+
+const isTodayDeficit = computed(() => summary.value.netCalories < 0)
+
+const deficitMessage = computed(() => {
+  if (!isTodayDeficit.value) {
+    return ''
+  }
+
+  return `今天已達成熱量赤字 ${Math.abs(summary.value.netCalories)} kcal`
+})
+
+const exerciseGoalLabel = computed(() => {
+  if (summary.value.exerciseBurn >= dailyExerciseGoal.value) {
+    return '運動目標達成'
+  }
+
+  return '運動消耗進度'
+})
+
+const exerciseGoalDetail = computed(() => {
+  if (summary.value.exerciseBurn >= dailyExerciseGoal.value) {
+    return `已超過目標 ${summary.value.exerciseBurn - dailyExerciseGoal.value} kcal`
+  }
+
+  return `${summary.value.exerciseBurn} / ${dailyExerciseGoal.value} kcal`
+})
+
+const ringTone = computed(() => {
+  if (summary.value.exerciseBurn >= dailyExerciseGoal.value) {
+    return '#2d7a56'
+  }
+
+  if (summary.value.exerciseBurn > 0) {
+    return '#4da3ff'
+  }
+
+  return '#617070'
 })
 
 const weightMessage = computed(() => {
@@ -152,22 +201,35 @@ const weeklyTrend = computed(() =>
     const intake = foodsStore.records
       .filter((record) => record.recordDate === date)
       .reduce((sum, record) => sum + record.totalCalories, 0)
-    const burn = exercisesStore.records
+    const exerciseBurn = exercisesStore.records
       .filter((record) => record.recordDate === date)
       .reduce((sum, record) => sum + record.totalCalories, 0)
+    const basalBurn = calculateBmr({
+      ...profileStore.profile,
+      weight: currentWeight.value,
+    })
+    const totalBurn = basalBurn + exerciseBurn
 
     return {
       date,
       intake,
-      burn,
+      basalBurn,
+      exerciseBurn,
+      totalBurn,
+      netCalories: intake - totalBurn,
+      isDeficit: intake < totalBurn,
       goal: dailyGoal.value,
     }
   }),
 )
 
+const weeklyDeficitDays = computed(() =>
+  weeklyTrend.value.filter((item) => item.isDeficit),
+)
+
 const chartOption = computed<EChartsOption>(() => ({
   animationDuration: 500,
-  color: ['#2d7a56', '#4da3ff', '#ffb454'],
+  color: ['#2d7a56', '#4da3ff', '#8b7cf6', '#ffb454'],
   grid: {
     left: 24,
     right: 24,
@@ -184,7 +246,7 @@ const chartOption = computed<EChartsOption>(() => ({
     textStyle: {
       color: '#617070',
     },
-    data: ['攝取', '消耗', '目標'],
+    data: ['攝取', '總消耗', '運動消耗', '目標'],
   },
   xAxis: {
     type: 'category',
@@ -223,12 +285,67 @@ const chartOption = computed<EChartsOption>(() => ({
       },
     },
     {
-      name: '消耗',
+      name: '總消耗',
       type: 'line',
       smooth: true,
       symbol: 'circle',
       symbolSize: 8,
-      data: weeklyTrend.value.map((item) => item.burn),
+      data: weeklyTrend.value.map((item) => item.totalBurn),
+    },
+    {
+      name: '運動消耗',
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 7,
+      lineStyle: {
+        width: 2,
+      },
+      data: weeklyTrend.value.map((item) => item.exerciseBurn),
+    },
+    {
+      name: '熱量赤字',
+      type: 'scatter',
+      symbol: 'roundRect',
+      symbolSize: [8, 8],
+      itemStyle: {
+        color: '#2d7a56',
+      },
+      label: {
+        show: true,
+        position: 'top',
+        distance: 14,
+        formatter: (params) => {
+          const value = typeof params.data === 'object' && params.data && 'netCalories' in params.data
+            ? Math.abs(Number(params.data.netCalories))
+            : 0
+
+          return `{deficit|赤字 ${value}}`
+        },
+        rich: {
+          deficit: {
+            color: '#8f1239',
+            backgroundColor: '#ffe4ea',
+            borderColor: 'rgba(190, 24, 93, 0.28)',
+            borderWidth: 1,
+            borderRadius: 999,
+            padding: [5, 10],
+            fontSize: 12,
+            fontWeight: 700,
+          },
+        },
+      },
+      tooltip: {
+        valueFormatter: (value) => `${value} kcal`,
+      },
+      data: weeklyTrend.value.map((item) =>
+        item.isDeficit
+          ? {
+              value: item.intake,
+              netCalories: item.netCalories,
+            }
+          : null,
+      ),
     },
     {
       name: '目標',
@@ -250,13 +367,15 @@ const statCards = computed(() => [
     unit: 'kcal',
     tone: 'warm',
     icon: Flame,
+    note: '來自今日飲食紀錄',
   },
   {
-    label: '今日消耗',
+    label: '今日總消耗',
     value: summary.value.totalBurn,
     unit: 'kcal',
     tone: 'cool',
     icon: Dumbbell,
+    note: `BMR ${summary.value.basalBurn} / 運動 ${summary.value.exerciseBurn}`,
   },
   {
     label: '今日淨熱量',
@@ -264,13 +383,15 @@ const statCards = computed(() => [
     unit: 'kcal',
     tone: 'violet',
     icon: Activity,
+    note: '攝取減去基礎代謝與運動',
   },
   {
-    label: '剩餘熱量',
+    label: '剩餘可攝取',
     value: summary.value.remainingCalories,
     unit: 'kcal',
     tone: 'fresh',
     icon: Target,
+    note: '以今日攝取對比每日目標熱量',
   },
 ])
 
@@ -311,11 +432,28 @@ onMounted(async () => {
           <span>{{ remainingMessage }}</span>
         </div>
 
+        <div v-if="isTodayDeficit" class="hero-note hero-note--deficit">
+          <Target :size="18" />
+          <span>{{ deficitMessage }}</span>
+        </div>
+
         <div class="hero-meta">
           <article class="hero-meta-card">
             <span>今日目標</span>
             <strong>{{ dailyGoal }} kcal</strong>
             <p>{{ activityLevelLabelMap[profileStore.profile.activityLevel] }}</p>
+          </article>
+
+          <article class="hero-meta-card">
+            <span>運動消耗目標</span>
+            <strong>{{ dailyExerciseGoal }} kcal</strong>
+            <p>右側狀態環會顯示今日達成率</p>
+          </article>
+
+          <article class="hero-meta-card">
+            <span>基礎代謝 BMR</span>
+            <strong>{{ summary.basalBurn }} kcal</strong>
+            <p>今日總消耗已含基礎代謝</p>
           </article>
 
           <article class="hero-meta-card">
@@ -327,11 +465,17 @@ onMounted(async () => {
       </div>
 
       <div class="dashboard-hero__ring">
-        <div class="calorie-ring" :style="{ '--progress': `${progressPercent}%` }">
+        <div
+          class="calorie-ring"
+          :style="{
+            '--progress': `${exerciseGoalPercent}%`,
+            '--ring-color': ringTone,
+          }"
+        >
           <div class="calorie-ring__inner">
-            <span>{{ progressPercent }}%</span>
-            <strong>今日熱量</strong>
-            <p>{{ summary.totalIntake }} / {{ dailyGoal }} kcal</p>
+            <span>{{ exerciseGoalPercent }}%</span>
+            <strong>{{ exerciseGoalLabel }}</strong>
+            <p>{{ exerciseGoalDetail }}</p>
           </div>
         </div>
       </div>
@@ -342,11 +486,24 @@ onMounted(async () => {
         <div class="card-header">
           <div>
             <span>本週熱量趨勢</span>
-            <p class="card-subtitle">用攝取、消耗與目標線快速判斷這週節奏。</p>
+            <p class="card-subtitle">用攝取、總消耗、運動消耗與目標線快速判斷這週節奏。</p>
           </div>
         </div>
       </template>
       <StatisticsChart :option="chartOption" />
+
+      <div v-if="weeklyDeficitDays.length" class="deficit-strip">
+        <span class="deficit-strip__label">本週已達成熱量赤字</span>
+        <div class="deficit-strip__items">
+          <span
+            v-for="item in weeklyDeficitDays"
+            :key="item.date"
+            class="deficit-chip"
+          >
+            {{ item.date.slice(5) }} · {{ Math.abs(item.netCalories) }} kcal
+          </span>
+        </div>
+      </div>
     </el-card>
 
     <el-row :gutter="16">
@@ -358,6 +515,7 @@ onMounted(async () => {
           <p>{{ card.label }}</p>
           <strong>{{ card.value }}</strong>
           <span>{{ card.unit }}</span>
+          <small class="dashboard-kpi__note">{{ card.note }}</small>
         </article>
       </el-col>
     </el-row>
@@ -533,9 +691,16 @@ onMounted(async () => {
   color: var(--text-main);
 }
 
+.hero-note--deficit {
+  margin-left: 12px;
+  background: rgba(45, 122, 86, 0.12);
+  border-color: rgba(45, 122, 86, 0.18);
+  color: var(--accent);
+}
+
 .hero-meta {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 14px;
   margin-top: 20px;
 }
@@ -578,12 +743,13 @@ onMounted(async () => {
 
 .calorie-ring {
   --progress: 0%;
+  --ring-color: #2d7a56;
   width: min(100%, 320px);
   aspect-ratio: 1;
   padding: 18px;
   border-radius: 50%;
   background:
-    conic-gradient(#2d7a56 var(--progress), rgba(45, 122, 86, 0.12) 0),
+    conic-gradient(var(--ring-color) var(--progress), rgba(45, 122, 86, 0.12) 0),
     linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(245, 250, 245, 0.88));
   display: grid;
   place-items: center;
@@ -621,6 +787,40 @@ onMounted(async () => {
   overflow: hidden;
 }
 
+.deficit-strip {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(36, 50, 51, 0.08);
+}
+
+.deficit-strip__label {
+  display: block;
+  margin-bottom: 10px;
+  color: #9f1239;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.deficit-strip__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.deficit-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #ffe4ea;
+  color: #8f1239;
+  border: 1px solid rgba(190, 24, 93, 0.2);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .dashboard-kpi {
   position: relative;
   display: flex;
@@ -653,6 +853,13 @@ onMounted(async () => {
 .dashboard-kpi strong {
   font-size: clamp(38px, 5vw, 48px);
   line-height: 1;
+}
+
+.dashboard-kpi__note {
+  display: block;
+  margin-top: 10px;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 
 .dashboard-kpi--warm {
@@ -790,6 +997,11 @@ onMounted(async () => {
   .quick-actions {
     grid-template-columns: 1fr;
   }
+
+  .hero-note--deficit {
+    margin-left: 0;
+    margin-top: 12px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -810,10 +1022,6 @@ onMounted(async () => {
 
   /* Add vertical spacing between stacked rows (sections) on small screens */
   .dashboard-page .el-row {
-    margin-top: 16px;
-  }
-
-  .el-row > .el-col:not(:first-child) {
     margin-top: 16px;
   }
 }

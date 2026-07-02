@@ -5,6 +5,8 @@ import type { WeightRecord } from '@/types/weight'
 export interface DailyCalorieStat {
   date: string
   intake: number
+  basalBurn: number
+  exerciseBurn: number
   burn: number
   net: number
 }
@@ -17,6 +19,7 @@ export interface WeightTrendStat {
 export function buildDailyCalorieStats(
   foods: FoodRecord[],
   exercises: ExerciseRecord[],
+  basalBurnPerDay = 0,
 ): DailyCalorieStat[] {
   const map = new Map<string, DailyCalorieStat>()
 
@@ -24,11 +27,14 @@ export function buildDailyCalorieStats(
     const current = map.get(food.recordDate) ?? {
       date: food.recordDate,
       intake: 0,
+      basalBurn: basalBurnPerDay,
+      exerciseBurn: 0,
       burn: 0,
       net: 0,
     }
 
     current.intake += food.totalCalories
+    current.burn = current.basalBurn + current.exerciseBurn
     current.net = current.intake - current.burn
     map.set(food.recordDate, current)
   }
@@ -37,11 +43,14 @@ export function buildDailyCalorieStats(
     const current = map.get(exercise.recordDate) ?? {
       date: exercise.recordDate,
       intake: 0,
+      basalBurn: basalBurnPerDay,
+      exerciseBurn: 0,
       burn: 0,
       net: 0,
     }
 
-    current.burn += exercise.totalCalories
+    current.exerciseBurn += exercise.totalCalories
+    current.burn = current.basalBurn + current.exerciseBurn
     current.net = current.intake - current.burn
     map.set(exercise.recordDate, current)
   }

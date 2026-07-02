@@ -84,6 +84,7 @@ function buildDefaultProfile(overrides?: Partial<UserProfile>): UserProfile {
     weight: 70,
     targetWeight: 65,
     dailyGoal: 2200,
+    dailyExerciseGoal: 300,
     activityLevel: 'medium',
     ...overrides,
   }

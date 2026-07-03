@@ -103,7 +103,7 @@ async function handleGoogleLogin() {
       <aside class="login-hero">
         <div class="login-brand">
           <div class="login-brand__logo-shell">
-            <img class="login-brand__logo" :src="calorieTrackerLogo" alt="Calorie Tracker logo" />
+            <img class="login-brand__logo" :src="calorieTrackerLogo" alt="Calorie Tracker logo" decoding="async" fetchpriority="high" />
           </div>
           <div class="login-brand__copy">
             <p class="login-brand__name">Calorie Tracker</p>
@@ -166,7 +166,7 @@ async function handleGoogleLogin() {
           <div class="login-card__header">
             <div class="login-card__brand">
               <div class="login-card__brand-mark">
-                <img :src="calorieTrackerLogo" alt="Calorie Tracker logo" />
+                <img :src="calorieTrackerLogo" alt="Calorie Tracker logo" decoding="async" />
               </div>
               <span>Calorie Tracker</span>
             </div>

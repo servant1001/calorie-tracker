@@ -575,7 +575,7 @@ watch(
   box-shadow:
     0 12px 24px rgba(45, 122, 86, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(126%);
 }
 
 .ai-card__grid {
@@ -592,7 +592,8 @@ watch(
   box-shadow:
     0 18px 36px rgba(33, 58, 55, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(22px) saturate(145%);
+  backdrop-filter: blur(12px) saturate(126%);
+  contain: layout paint style;
 }
 
 .ai-panel__heading {
@@ -685,6 +686,7 @@ watch(
   max-height: 280px;
   object-fit: cover;
   border-radius: 18px;
+  content-visibility: auto;
 }
 
 .ai-photo-preview__meta {

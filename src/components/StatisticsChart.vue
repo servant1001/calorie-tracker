@@ -10,6 +10,7 @@ const chartElement = ref<HTMLDivElement | null>(null)
 let chartInstance: import('echarts').ECharts | null = null
 let echartsModule: typeof import('echarts') | null = null
 let renderFrameId: number | null = null
+let resizeFrameId: number | null = null
 
 async function loadEcharts() {
   if (!echartsModule) {
@@ -43,7 +44,14 @@ function scheduleRender() {
 }
 
 function handleResize() {
-  chartInstance?.resize()
+  if (resizeFrameId !== null) {
+    window.cancelAnimationFrame(resizeFrameId)
+  }
+
+  resizeFrameId = window.requestAnimationFrame(() => {
+    resizeFrameId = null
+    chartInstance?.resize()
+  })
 }
 
 watch(
@@ -57,13 +65,18 @@ watch(
 
 onMounted(() => {
   scheduleRender()
-  window.addEventListener('resize', handleResize)
+  window.addEventListener('resize', handleResize, { passive: true })
 })
 
 onBeforeUnmount(() => {
   if (renderFrameId !== null) {
     window.cancelAnimationFrame(renderFrameId)
     renderFrameId = null
+  }
+
+  if (resizeFrameId !== null) {
+    window.cancelAnimationFrame(resizeFrameId)
+    resizeFrameId = null
   }
 
   window.removeEventListener('resize', handleResize)

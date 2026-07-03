@@ -749,6 +749,7 @@ onMounted(async () => {
     0 26px 60px rgba(33, 58, 55, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
   overflow: hidden;
+  contain: layout paint style;
 }
 
 .dashboard-hero__glow {
@@ -833,7 +834,7 @@ onMounted(async () => {
   box-shadow:
     0 18px 36px rgba(33, 58, 55, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(126%);
 }
 
 .hero-note--deficit {
@@ -858,8 +859,9 @@ onMounted(async () => {
   box-shadow:
     0 22px 42px rgba(33, 58, 55, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(24px) saturate(145%);
+  backdrop-filter: blur(14px) saturate(128%);
   overflow: hidden;
+  contain: layout paint style;
 }
 
 .hero-meta-card::before {
@@ -935,7 +937,8 @@ onMounted(async () => {
   box-shadow:
     0 24px 48px rgba(33, 58, 55, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(28px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(128%);
+  contain: layout paint style;
 }
 
 .dashboard-hero__ring-copy {
@@ -1018,6 +1021,8 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
+  content-visibility: auto;
+  contain-intrinsic-size: 320px;
 }
 
 .dashboard-section {
@@ -1028,7 +1033,10 @@ onMounted(async () => {
   box-shadow:
     0 24px 48px rgba(33, 58, 55, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.76);
-  backdrop-filter: blur(26px) saturate(145%);
+  backdrop-filter: blur(14px) saturate(128%);
+  contain: layout paint style;
+  content-visibility: auto;
+  contain-intrinsic-size: 520px;
 }
 
 .dashboard-section--chart {
@@ -1070,7 +1078,7 @@ onMounted(async () => {
   box-shadow:
     0 12px 24px rgba(143, 18, 57, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(126%);
 }
 
 .chart-panel {
@@ -1112,7 +1120,7 @@ onMounted(async () => {
   box-shadow:
     0 10px 20px rgba(143, 18, 57, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(16px) saturate(135%);
+  backdrop-filter: blur(10px) saturate(122%);
 }
 
 .dashboard-kpi {
@@ -1131,8 +1139,9 @@ onMounted(async () => {
   box-shadow:
     0 22px 40px rgba(33, 58, 55, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.74);
-  backdrop-filter: blur(24px) saturate(145%);
+  backdrop-filter: blur(12px) saturate(126%);
   overflow: hidden;
+  contain: layout paint style;
 }
 
 .dashboard-kpi::before {
@@ -1212,6 +1221,8 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  content-visibility: auto;
+  contain-intrinsic-size: 200px;
 }
 
 .quick-action-card {
@@ -1235,7 +1246,8 @@ onMounted(async () => {
   box-shadow:
     0 22px 40px rgba(33, 58, 55, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.74);
-  backdrop-filter: blur(24px) saturate(145%);
+  backdrop-filter: blur(12px) saturate(126%);
+  contain: layout paint style;
 }
 
 .quick-action-card::after {
@@ -1352,7 +1364,8 @@ onMounted(async () => {
   box-shadow:
     0 16px 30px rgba(33, 58, 55, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(122%);
+  contain: layout paint style;
 }
 
 .record-item__icon {

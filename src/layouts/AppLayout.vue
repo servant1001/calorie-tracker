@@ -24,6 +24,7 @@ const mobileBreakpoint = 992
 const isMobile = ref(false)
 const isSidebarOpen = ref(false)
 const isSidebarCollapsed = ref(false)
+let resizeFrameId: number | null = null
 
 const menuItems = [
   { path: '/', label: '首頁總覽', icon: House },
@@ -70,6 +71,17 @@ function syncViewportState() {
   }
 }
 
+function scheduleViewportSync() {
+  if (resizeFrameId !== null) {
+    return
+  }
+
+  resizeFrameId = window.requestAnimationFrame(() => {
+    resizeFrameId = null
+    syncViewportState()
+  })
+}
+
 function toggleSidebar() {
   if (isMobile.value) {
     isSidebarOpen.value = !isSidebarOpen.value
@@ -104,11 +116,16 @@ watch(
 
 onMounted(() => {
   syncViewportState()
-  window.addEventListener('resize', syncViewportState)
+  window.addEventListener('resize', scheduleViewportSync, { passive: true })
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', syncViewportState)
+  if (resizeFrameId !== null) {
+    window.cancelAnimationFrame(resizeFrameId)
+    resizeFrameId = null
+  }
+
+  window.removeEventListener('resize', scheduleViewportSync)
 })
 </script>
 
@@ -131,7 +148,7 @@ onBeforeUnmount(() => {
       <div class="brand-block" :class="{ 'brand-block--compact': !isMobile && isSidebarCollapsed }">
         <div class="brand-block__header">
           <div class="brand-block__logo-shell">
-            <img class="brand-block__logo" :src="calorieTrackerLogo" alt="Calorie Tracker logo" />
+            <img class="brand-block__logo" :src="calorieTrackerLogo" alt="Calorie Tracker logo" decoding="async" />
           </div>
           <div v-if="!isSidebarCollapsed || isMobile" class="brand-block__copy">
             <p class="brand-kicker">Daily wellness</p>

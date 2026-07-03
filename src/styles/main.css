@@ -21,6 +21,8 @@
   --fresh: #e9f8e8;
   --text-main: #243233;
   --text-muted: #617070;
+  --glass-blur: 14px;
+  --glass-blur-strong: 18px;
 }
 
 * {
@@ -43,7 +45,6 @@ body {
     radial-gradient(circle at 86% 18%, rgba(123, 185, 255, 0.2), transparent 24%),
     radial-gradient(circle at 72% 82%, rgba(255, 206, 148, 0.18), transparent 22%),
     linear-gradient(180deg, #f9fcf7 0%, #f1f5ef 48%, #eef4f3 100%);
-  background-attachment: fixed;
 }
 
 a {
@@ -59,11 +60,12 @@ a {
 }
 
 .app-shell__ambient {
-  position: absolute;
+  position: fixed;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
+  contain: paint;
 }
 
 .app-shell__orb {
@@ -111,7 +113,7 @@ a {
 .app-aside {
   border-right: 1px solid var(--shell-border);
   background: rgba(245, 250, 245, 0.78);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(var(--glass-blur));
   padding: 24px 18px;
   transition:
     width 0.25s ease,
@@ -119,6 +121,7 @@ a {
     opacity 0.25s ease;
   overflow: hidden;
   z-index: 30;
+  contain: layout paint;
 }
 
 .app-aside--collapsed {
@@ -383,6 +386,7 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  contain: layout paint;
 }
 
 .app-header__group {
@@ -495,7 +499,10 @@ a {
   border: 1px solid var(--shell-border);
   border-radius: 24px;
   background: var(--shell-bg);
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(var(--glass-blur));
+  contain: layout paint style;
+  content-visibility: auto;
+  contain-intrinsic-size: 360px;
 }
 
 .card-header {
@@ -640,7 +647,8 @@ a {
   box-shadow:
     0 24px 52px rgba(33, 58, 55, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.76);
-  backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(128%);
+  contain: layout paint style;
 }
 
 .journal-page--foods .journal-hero {
@@ -684,7 +692,10 @@ a {
   box-shadow:
     0 24px 48px rgba(33, 58, 55, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.76);
-  backdrop-filter: blur(24px) saturate(145%);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(130%);
+  contain: layout paint style;
+  content-visibility: auto;
+  contain-intrinsic-size: 480px;
 }
 
 .journal-shell-card .el-card__header {
@@ -699,7 +710,8 @@ a {
   box-shadow:
     0 16px 30px rgba(33, 58, 55, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(126%);
+  contain: layout paint style;
 }
 
 .journal-filters::before {
@@ -788,7 +800,7 @@ a {
   box-shadow:
     0 28px 60px rgba(33, 58, 55, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(28px) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(132%);
   overflow: hidden;
 }
 
@@ -1013,6 +1025,13 @@ a {
   animation: fade-up 0.45s ease both;
 }
 
+.statistics-shell-card,
+.settings-shell-card {
+  contain: layout paint style;
+  content-visibility: auto;
+  contain-intrinsic-size: 420px;
+}
+
 .page-stack > *:nth-child(2) {
   animation-delay: 0.04s;
 }
@@ -1089,6 +1108,18 @@ a {
 
   .app-header {
     padding-top: 18px;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .app-aside,
+  .content-card,
+  .auth-card,
+  .journal-hero,
+  .journal-shell-card,
+  .journal-filters,
+  .journal-dialog .el-dialog {
+    backdrop-filter: blur(8px);
   }
 }
 

@@ -55,13 +55,16 @@ const sidebarClasses = computed(() => ({
 
 function syncViewportState() {
   const nextIsMobile = window.innerWidth <= mobileBreakpoint
+  const wasMobile = isMobile.value
 
   if (nextIsMobile !== isMobile.value) {
     isMobile.value = nextIsMobile
   }
 
   if (isMobile.value) {
-    isSidebarOpen.value = false
+    if (!wasMobile) {
+      isSidebarOpen.value = false
+    }
   } else {
     isSidebarOpen.value = true
   }
@@ -110,8 +113,6 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-if="isMobile && isSidebarOpen" class="app-overlay" @click="closeMobileSidebar"></div>
-
   <el-container class="app-shell" :class="{ 'app-shell--mobile': isMobile }">
     <div class="app-shell__ambient">
       <div class="app-shell__orb app-shell__orb--mint"></div>
@@ -119,6 +120,8 @@ onBeforeUnmount(() => {
       <div class="app-shell__orb app-shell__orb--peach"></div>
       <div class="app-shell__grain"></div>
     </div>
+
+    <div v-if="isMobile && isSidebarOpen" class="app-overlay" @click="closeMobileSidebar"></div>
 
     <el-aside
       :class="['app-aside', sidebarClasses]"

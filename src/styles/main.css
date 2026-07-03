@@ -135,7 +135,6 @@ a {
   position: fixed;
   inset: 0;
   background: rgba(20, 28, 29, 0.38);
-  backdrop-filter: blur(2px);
   z-index: 20;
 }
 
@@ -1058,7 +1057,6 @@ a {
     overflow-x: hidden;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
   }
 
   .app-aside--open {

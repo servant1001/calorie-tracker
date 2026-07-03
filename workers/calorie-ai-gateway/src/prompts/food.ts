@@ -55,5 +55,8 @@ export function buildMealPhotoSystemPrompt() {
     '請根據照片中最可能的餐點內容，回傳結構化 JSON。',
     '若無法百分之百確定，仍可估算，但 note 與 notice 要提醒這是 AI 估算值。',
     '請使用 breakfast、lunch、dinner、snack、midnight-snack 其中之一作為 mealType。',
+    '如果一張照片中有多個食物或飲料，請拆成多筆 items。',
+    '若照片模糊、遮擋嚴重或資訊不足，也請盡可能給出合理估算，同時在 note 清楚標記不確定性。',
+    'quantity、caloriesPerUnit、totalCalories 都必須回傳數字。',
   ].join('\n')
 }

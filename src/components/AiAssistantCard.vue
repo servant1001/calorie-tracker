@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { Bot, Brain, Sparkles, Utensils } from 'lucide-vue-next'
+import { Bot, Brain, Camera, ImagePlus, Sparkles, Utensils } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
-import { generateDailySummary, parseFoodText } from '@/api/ai'
+import { analyzeMealPhoto, generateDailySummary, parseFoodText } from '@/api/ai'
 import { useFoodsStore } from '@/stores/foods'
 import type { DailySummaryResponse } from '@/types/ai'
 import type { ActivityLevel, MealType } from '@/types/common'
 import type { ExerciseRecord } from '@/types/exercise'
 import type { FoodFormPayload, FoodRecord } from '@/types/food'
+import { createOptimizedMealPhotoDataUrl } from '@/utils/image'
 import { showError, showSuccess } from '@/utils/message'
 
 interface AiDraftFoodItem {
@@ -51,11 +52,15 @@ const mealOptions: Array<{ label: string; value: MealType }> = [
 ]
 
 const inputText = ref('')
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const mealPhotoDataUrl = ref('')
+const mealPhotoFileName = ref('')
 const notice = ref('')
 const confidence = ref(0)
 const providerLabel = ref('')
 const parsedItems = ref<AiDraftFoodItem[]>([])
 const isParsing = ref(false)
+const isAnalyzingPhoto = ref(false)
 const isSaving = ref(false)
 const isGeneratingSummary = ref(false)
 const summary = ref<DailySummaryResponse | null>(null)
@@ -86,6 +91,22 @@ function resetParsedItems() {
   providerLabel.value = ''
 }
 
+function applyParsedFoodResult(items: AiDraftFoodItem[], meta: { confidence: number; notice: string; providerLabel: string }) {
+  parsedItems.value = items
+  notice.value = meta.notice
+  confidence.value = meta.confidence
+  providerLabel.value = meta.providerLabel
+}
+
+function resetMealPhoto() {
+  mealPhotoDataUrl.value = ''
+  mealPhotoFileName.value = ''
+
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+  }
+}
+
 function addEmptyItem() {
   parsedItems.value = [...parsedItems.value, createDraftItem()]
 }
@@ -109,19 +130,23 @@ async function handleParseFoodText() {
       locale: 'zh-TW',
     })
 
-    parsedItems.value = response.items.map((item) =>
-      createDraftItem({
-        mealType: item.mealType,
-        foodName: item.foodName,
-        quantity: item.quantity,
-        unit: item.unit,
-        caloriesPerUnit: item.caloriesPerUnit,
-        note: item.note,
-      }),
+    applyParsedFoodResult(
+      response.items.map((item) =>
+        createDraftItem({
+          mealType: item.mealType,
+          foodName: item.foodName,
+          quantity: item.quantity,
+          unit: item.unit,
+          caloriesPerUnit: item.caloriesPerUnit,
+          note: item.note,
+        }),
+      ),
+      {
+        notice: response.notice,
+        confidence: Math.round(response.confidence * 100),
+        providerLabel: `${response.provider} · ${response.model}`,
+      },
     )
-    notice.value = response.notice
-    confidence.value = Math.round(response.confidence * 100)
-    providerLabel.value = `${response.provider} · ${response.model}`
 
     if (!response.items.length) {
       showError(new Error('AI 目前沒有成功解析出可保存的飲食項目，請換個描述方式再試一次。'))
@@ -131,6 +156,80 @@ async function handleParseFoodText() {
   } finally {
     isParsing.value = false
   }
+}
+
+async function handleMealPhotoPicked(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  if (!file.type.startsWith('image/')) {
+    showError(new Error('請選擇圖片檔案。'))
+    resetMealPhoto()
+    return
+  }
+
+  try {
+    mealPhotoDataUrl.value = await createOptimizedMealPhotoDataUrl(file)
+    mealPhotoFileName.value = file.name
+  } catch (error) {
+    resetMealPhoto()
+    showError(error, '餐點照片處理失敗，請換一張照片再試。')
+  }
+}
+
+async function handleAnalyzeMealPhoto() {
+  if (!mealPhotoDataUrl.value) {
+    showError(new Error('請先選擇一張餐點照片。'))
+    return
+  }
+
+  isAnalyzingPhoto.value = true
+
+  try {
+    const response = await analyzeMealPhoto({
+      imageUrl: mealPhotoDataUrl.value,
+      recordDate: props.recordDate,
+      locale: 'zh-TW',
+    })
+
+    applyParsedFoodResult(
+      response.items.map((item) =>
+        createDraftItem({
+          mealType: item.mealType,
+          foodName: item.foodName,
+          quantity: item.quantity,
+          unit: item.unit,
+          caloriesPerUnit: item.caloriesPerUnit,
+          note: item.note,
+        }),
+      ),
+      {
+        notice: response.notice,
+        confidence: Math.round(response.confidence * 100),
+        providerLabel: `${response.provider} · ${response.model}`,
+      },
+    )
+
+    if (!response.items.length) {
+      showError(new Error('AI 目前沒有辨識出可保存的餐點項目，請換張更清楚的照片再試。'))
+    }
+  } catch (error) {
+    showError(error, 'AI 餐點辨識失敗，請稍後再試。')
+  } finally {
+    isAnalyzingPhoto.value = false
+  }
+}
+
+function triggerMealPhotoPicker() {
+  fileInputRef.value?.click()
+}
+
+function clearMealPhoto() {
+  resetMealPhoto()
 }
 
 async function handleSaveFoods() {
@@ -182,6 +281,7 @@ async function handleSaveFoods() {
     emit('saved', payloads.length)
     inputText.value = ''
     resetParsedItems()
+    resetMealPhoto()
   } catch (error) {
     showError(error, '保存 AI 飲食紀錄失敗，請稍後再試。')
   } finally {
@@ -226,6 +326,7 @@ watch(
     summary.value = null
     resetParsedItems()
     inputText.value = ''
+    resetMealPhoto()
   },
 )
 </script>
@@ -271,6 +372,45 @@ watch(
             AI 解析飲食
           </el-button>
           <el-button plain @click="addEmptyItem">手動新增一筆</el-button>
+        </div>
+
+        <div class="ai-photo-box">
+          <div class="ai-photo-box__header">
+            <div class="ai-photo-box__title">
+              <Camera :size="18" />
+              <strong>AI 拍照辨識餐點</strong>
+            </div>
+            <span>支援從照片估算餐點與熱量</span>
+          </div>
+
+          <input
+            ref="fileInputRef"
+            class="ai-photo-box__input"
+            type="file"
+            accept="image/*"
+            @change="handleMealPhotoPicked"
+          />
+
+          <div v-if="mealPhotoDataUrl" class="ai-photo-preview">
+            <img :src="mealPhotoDataUrl" :alt="mealPhotoFileName || 'meal photo preview'" class="ai-photo-preview__image">
+            <div class="ai-photo-preview__meta">
+              <strong>{{ mealPhotoFileName || '已選擇餐點照片' }}</strong>
+              <p>照片會先在本機壓縮，再送給 AI 做餐點辨識。</p>
+            </div>
+          </div>
+
+          <div v-else class="ai-photo-empty">
+            <ImagePlus :size="20" />
+            <p>上傳一張清楚的餐點照片，AI 會拆成可編輯的飲食項目。</p>
+          </div>
+
+          <div class="ai-panel__actions">
+            <el-button plain @click="triggerMealPhotoPicker">選擇照片</el-button>
+            <el-button type="primary" :loading="isAnalyzingPhoto" @click="handleAnalyzeMealPhoto">
+              AI 辨識餐點照片
+            </el-button>
+            <el-button v-if="mealPhotoDataUrl" text @click="clearMealPhoto">清除照片</el-button>
+          </div>
         </div>
 
         <div v-if="notice || providerLabel" class="ai-meta">
@@ -494,6 +634,70 @@ watch(
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 14px;
+}
+
+.ai-photo-box {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(233, 244, 255, 0.56), rgba(218, 233, 255, 0.22));
+  border: 1px solid rgba(255, 255, 255, 0.48);
+}
+
+.ai-photo-box__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ai-photo-box__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-photo-box__header span,
+.ai-photo-preview__meta p,
+.ai-photo-empty p {
+  color: var(--text-muted);
+}
+
+.ai-photo-box__input {
+  display: none;
+}
+
+.ai-photo-preview,
+.ai-photo-empty {
+  display: grid;
+  gap: 12px;
+  place-items: center;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.44);
+  border: 1px solid rgba(255, 255, 255, 0.48);
+}
+
+.ai-photo-preview__image {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  border-radius: 18px;
+}
+
+.ai-photo-preview__meta {
+  width: 100%;
+}
+
+.ai-photo-preview__meta strong {
+  display: block;
+}
+
+.ai-photo-preview__meta p,
+.ai-photo-empty p {
+  margin: 4px 0 0;
 }
 
 .ai-meta {

@@ -31,13 +31,13 @@ function buildMessages(payload: StructuredGenerationRequest) {
 export const groqProvider: ProviderAdapter = {
   name: 'groq',
   isEnabled(env) {
-    return Boolean(env.GROQ_MODEL && parseJsonStringArray(env.GROQ_API_KEYS_JSON).length)
+    return Boolean((env.GROQ_MODEL || env.GROQ_VISION_MODEL) && parseJsonStringArray(env.GROQ_API_KEYS_JSON).length)
   },
   async generateStructuredOutput<TData>(
     env: Env,
     payload: StructuredGenerationRequest,
   ): Promise<StructuredGenerationResponse<TData>> {
-    const model = String(env.GROQ_MODEL ?? '').trim()
+    const model = String(payload.imageUrl ? env.GROQ_VISION_MODEL ?? env.GROQ_MODEL ?? '' : env.GROQ_MODEL ?? '').trim()
     const apiKeys = parseJsonStringArray(env.GROQ_API_KEYS_JSON)
     let lastError: Error | null = null
 

@@ -6,6 +6,7 @@ export interface Env {
   ALLOWED_ORIGIN?: string
   AI_PROVIDER_ORDER?: string
   GROQ_MODEL?: string
+  GROQ_VISION_MODEL?: string
   GROQ_API_KEYS_JSON?: string
   OPENAI_MODEL?: string
   OPENAI_REASONING_EFFORT?: 'low' | 'medium' | 'high'

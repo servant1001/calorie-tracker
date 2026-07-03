@@ -15,6 +15,13 @@ Calorie Tracker 用來記錄每日飲食、運動與體重，並自動計算：
 
 目前專案以 MVP 為主，已完成登入、Dashboard、飲食 CRUD、運動 CRUD、體重 CRUD、設定頁與統計頁。
 
+目前也已加入 AI 第一階段 MVP：
+
+- AI 文字解析飲食
+- AI 今日健康摘要
+- Cloudflare Workers AI Gateway
+- 多 Provider / 多 API Key fallback 架構
+
 ## 技術棧
 
 - Vue 3
@@ -27,6 +34,7 @@ Calorie Tracker 用來記錄每日飲食、運動與體重，並自動計算：
 - Firebase Realtime Database
 - ECharts
 - Axios
+- Cloudflare Workers
 
 ## 目前功能
 
@@ -45,6 +53,7 @@ Calorie Tracker 用來記錄每日飲食、運動與體重，並自動計算：
 - 今日飲食摘要
 - 今日運動摘要
 - 今日體重摘要
+- AI 健康助手
 
 ### 飲食紀錄
 
@@ -78,7 +87,16 @@ Calorie Tracker 用來記錄每日飲食、運動與體重，並自動計算：
 - 性別
 - 活動量
 - 每日目標熱量
+- 每日運動消耗目標
 - 目標體重
+
+### AI 功能
+
+- 自然語言解析飲食內容
+- AI 解析後可人工確認與編輯
+- 確認後才寫入 Firebase，避免錯誤資料直接入庫
+- 依今日飲食、運動、BMR 與淨熱量產生 AI 健康摘要
+- 預留餐點照片辨識 API
 
 ## 專案結構
 
@@ -89,6 +107,7 @@ src
   components/    共用元件
   constants/     常數設定
   firebase/      Firebase 初始化與操作
+  prompts/       AI prompt 模板
   layouts/       版型
   router/        路由設定
   stores/        Pinia 狀態管理
@@ -146,6 +165,7 @@ VITE_FIREBASE_STORAGE_BUCKET=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 VITE_FIREBASE_MEASUREMENT_ID=
+VITE_AI_GATEWAY_BASE_URL=
 ```
 
 ### 4. 啟動開發環境
@@ -230,6 +250,65 @@ weights/{uid}/{weightId}
 - Authentication 的 Google Provider 已啟用
 - `.env` 中的 `VITE_FIREBASE_DATABASE_URL` 指向正確專案
 
+## AI Gateway 設定
+
+AI 後端位於：
+
+- [workers/calorie-ai-gateway](C:/Users/serva/Desktop/calorie-tracker/workers/calorie-ai-gateway/README.md)
+
+功能重點：
+
+- 支援 `groq`
+- 支援 `openai`
+- 支援 `openai_compat`
+- 支援同一 provider 綁定多組 API Key
+- 當單一 key 或單一 provider 失敗時，自動切換下一組
+
+### Frontend 環境變數
+
+本機串接 Worker 時，在前端 `.env` 設定：
+
+```env
+VITE_AI_GATEWAY_BASE_URL=http://127.0.0.1:8787
+```
+
+### Worker 本機開發
+
+```bash
+cd workers/calorie-ai-gateway
+npm install
+cp .dev.vars.example .dev.vars
+npm run dev
+```
+
+Windows PowerShell：
+
+```powershell
+Set-Location workers/calorie-ai-gateway
+npm install
+Copy-Item .dev.vars.example .dev.vars
+npm run dev
+```
+
+`.dev.vars` 需要至少填入一種來源，例如：
+
+```env
+GROQ_MODEL=openai/gpt-oss-120b
+GROQ_API_KEYS_JSON=["gsk-xxx-primary","gsk-xxx-backup"]
+OPENAI_API_KEYS_JSON=["sk-xxx-primary","sk-xxx-backup"]
+OPENAI_COMPAT_BASE_URL=
+OPENAI_COMPAT_MODEL=
+OPENAI_COMPAT_API_KEYS_JSON=[]
+ALLOWED_ORIGIN=http://localhost:5173
+AI_PROVIDER_ORDER=groq,openai,openai_compat
+```
+
+目前 Worker API：
+
+- `POST /api/ai/parse-food-text`
+- `POST /api/ai/daily-summary`
+- `POST /api/ai/meal-photo`
+
 ## 開發規範
 
 - 使用 Vue 3 Composition API
@@ -245,6 +324,7 @@ weights/{uid}/{weightId}
 ## 已知狀態
 
 - 專案可正常 `npm run build`
+- AI 第一階段 MVP 已可用於 Dashboard
 - 新增/編輯/刪除飲食、運動、體重後，列表會重新抓取資料
 - 部分舊頁面仍有中文編碼亂碼，建議後續逐頁整理文案
 
@@ -253,8 +333,9 @@ weights/{uid}/{weightId}
 - 常用食物 / 常用運動
 - 每週 / 每月分析
 - TDEE 分析
-- AI 飲食分析
-- 食物辨識與熱量推估
+- AI 飲食分析深化
+- 食物辨識與熱量推估正式上線
+- AI 減脂 / 增肌建議
+- AI 每週 / 每月健康報告
 - Excel / PDF 匯出
 - Dark Mode
-

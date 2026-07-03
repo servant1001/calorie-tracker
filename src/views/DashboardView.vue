@@ -14,6 +14,7 @@ import {
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
+import AiAssistantCard from '@/components/AiAssistantCard.vue'
 import StatisticsChart from '@/components/StatisticsChart.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useExercisesStore } from '@/stores/exercises'
@@ -49,13 +50,17 @@ const activityLevelLabelMap = {
   high: '高活動量',
 } as const
 
-const todayFoods = computed(() =>
-  foodsStore.records.filter((record) => record.recordDate === today).slice(0, 4),
+const allTodayFoods = computed(() =>
+  foodsStore.records.filter((record) => record.recordDate === today),
 )
 
-const todayExercises = computed(() =>
-  exercisesStore.records.filter((record) => record.recordDate === today).slice(0, 4),
+const todayFoods = computed(() => allTodayFoods.value.slice(0, 4))
+
+const allTodayExercises = computed(() =>
+  exercisesStore.records.filter((record) => record.recordDate === today),
 )
+
+const todayExercises = computed(() => allTodayExercises.value.slice(0, 4))
 
 const latestWeights = computed(() =>
   [...weightsStore.records]
@@ -572,6 +577,23 @@ onMounted(async () => {
         <ArrowRight :size="18" />
       </button>
     </section>
+
+    <AiAssistantCard
+      :user-id="authStore.userId"
+      :record-date="today"
+      :activity-level="profileStore.profile.activityLevel"
+      :daily-goal="dailyGoal"
+      :daily-exercise-goal="dailyExerciseGoal"
+      :current-weight="summary.currentWeight"
+      :target-weight="profileStore.profile.targetWeight"
+      :intake-total="summary.totalIntake"
+      :exercise-total="summary.exerciseBurn"
+      :basal-burn="summary.basalBurn"
+      :total-burn="summary.totalBurn"
+      :net-calories="summary.netCalories"
+      :foods="allTodayFoods"
+      :exercises="allTodayExercises"
+    />
 
     <el-card shadow="hover" class="content-card dashboard-section dashboard-section--chart">
       <template #header>

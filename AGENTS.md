@@ -8,6 +8,7 @@
 - 類型：Vue 3 SPA
 - 主要用途：記錄飲食、運動、體重，並計算每日熱量相關指標
 - 後端：Firebase Authentication + Firebase Realtime Database
+- AI 後端：Cloudflare Workers AI Gateway
 
 ## 技術基線
 
@@ -19,6 +20,7 @@
 - Vue Router
 - Firebase Web SDK
 - ECharts
+- Cloudflare Workers
 
 ## 開發原則
 
@@ -41,6 +43,12 @@
 
 - 放各模組 CRUD 封裝
 - 頁面與 store 不直接散寫 Database API
+- AI API 也集中在這裡，前端統一從 `src/api/ai.ts` 呼叫
+
+### `src/prompts`
+
+- 放 AI prompt 模板
+- 調整 AI 回應口吻或結構時優先修改這裡
 
 ### `src/stores`
 
@@ -62,6 +70,13 @@
 - 放頁面
 - 頁面負責組合 UI 與互動，不要承載太多資料層細節
 
+### `workers/calorie-ai-gateway`
+
+- Cloudflare Workers 專案
+- 負責 AI provider 路由、多 API key、fallback 與 CORS
+- provider adapter 放在 `src/providers`
+- prompt schema 與系統提示分開管理
+
 ## 實作規範
 
 - 使用 Vue 3 Composition API
@@ -71,6 +86,8 @@
 - 表單送出後要同步刷新對應列表或更新 store
 - 刪除操作要有確認提示
 - 計算型欄位盡量在前端與資料層都保持一致
+- AI 回傳資料寫入 Firebase 前，一定要讓使用者可確認或編輯
+- AI 回傳 JSON 要做正規化與基本驗證
 
 ## Firebase 規則注意事項
 
@@ -93,6 +110,14 @@
 5. 在 `src/router` 註冊路由
 6. 在 Dashboard / Statistics 視需要串接摘要或圖表
 
+### 新增 AI 功能
+
+1. 先定義 `src/types/ai.ts`
+2. 再補 `src/api/ai.ts`
+3. 若需後端路由，優先放在 `workers/calorie-ai-gateway`
+4. Prompt 與 schema 分開管理，避免頁面內硬寫長 prompt
+5. 預設採用「AI 先解析，使用者確認後才保存」
+
 ### 修正 CRUD 問題
 
 1. 先檢查頁面是否有 await store action
@@ -113,12 +138,14 @@
 - 新增必要環境變數
 - Firebase 設定方式改變
 - 安裝或啟動步驟改變
+- AI Gateway 的 provider、部署或 env 流程改變
 
 ## 目前已知待整理項目
 
 - 部分頁面仍有中文亂碼，需要逐步清理
 - 路由檔與部分舊頁面文案也可能有編碼問題
 - 若要進一步上線，建議補上測試與 Firebase Hosting 流程
+- AI 影像辨識、每週報告、每月總結目前仍是下一階段
 
 ## 交付標準
 

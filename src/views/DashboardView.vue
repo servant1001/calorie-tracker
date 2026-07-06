@@ -124,13 +124,14 @@ const remainingMessage = computed(() => {
 })
 
 const isTodayDeficit = computed(() => summary.value.netCalories < 0)
+const todayDeficitCalories = computed(() => Math.round(Math.abs(summary.value.netCalories)))
 
 const deficitMessage = computed(() => {
   if (!isTodayDeficit.value) {
     return ''
   }
 
-  return `今天已達成熱量赤字 ${Math.abs(summary.value.netCalories)} kcal`
+  return `今天已達成熱量赤字 ${todayDeficitCalories.value} kcal`
 })
 
 const exerciseGoalLabel = computed(() => {
@@ -322,7 +323,7 @@ const chartOption = computed<EChartsOption>(() => ({
         distance: 14,
         formatter: (params) => {
           const value = typeof params.data === 'object' && params.data && 'netCalories' in params.data
-            ? Math.abs(Number(params.data.netCalories))
+            ? Math.round(Math.abs(Number(params.data.netCalories)))
             : 0
 
           return `{deficit|赤字 ${value}}`
@@ -622,7 +623,7 @@ onMounted(async () => {
             :key="item.date"
             class="deficit-chip"
           >
-            {{ item.date.slice(5) }} · {{ Math.abs(item.netCalories) }} kcal
+            {{ item.date.slice(5) }} · {{ Math.round(Math.abs(item.netCalories)) }} kcal
           </span>
         </div>
       </div>

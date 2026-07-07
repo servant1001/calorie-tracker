@@ -9,10 +9,14 @@ function getExercisesCollectionRef(userId: string) {
 }
 
 function buildExerciseRecord(id: string, payload: ExerciseFormPayload): ExerciseRecord {
+  const totalCalories = typeof payload.totalCalories === 'number'
+    ? payload.totalCalories
+    : calculateExerciseCalories(payload.durationMinutes, payload.caloriesPerMinute)
+
   return {
     id,
     ...payload,
-    totalCalories: calculateExerciseCalories(payload.durationMinutes, payload.caloriesPerMinute),
+    totalCalories,
   }
 }
 

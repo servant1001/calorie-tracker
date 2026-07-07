@@ -13,5 +13,6 @@ export interface ExerciseFormPayload {
   exerciseName: string
   durationMinutes: number
   caloriesPerMinute: number
+  totalCalories?: number
   note: string
 }

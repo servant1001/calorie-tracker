@@ -15,6 +15,7 @@ const formRef = ref<FormInstance>()
 const isDialogVisible = ref(false)
 const isSubmitting = ref(false)
 const editingExerciseId = ref<string | null>(null)
+const useManualTotalCalories = ref(false)
 
 const filters = reactive({
   recordDate: formatDate(new Date()),
@@ -25,6 +26,7 @@ const form = reactive<ExerciseFormPayload>({
   exerciseName: '',
   durationMinutes: 30,
   caloriesPerMinute: 8,
+  totalCalories: 240,
   note: '',
 })
 
@@ -41,6 +43,9 @@ const totalCalories = computed(() => exercisesStore.totalCalories)
 const totalMinutes = computed(() =>
   filteredRecords.value.reduce((sum, record) => sum + record.durationMinutes, 0),
 )
+const calculatedTotalCalories = computed(() =>
+  Math.round(form.durationMinutes * form.caloriesPerMinute),
+)
 
 watch(
   () => filters.recordDate,
@@ -55,8 +60,10 @@ function resetForm() {
   form.exerciseName = ''
   form.durationMinutes = 30
   form.caloriesPerMinute = 8
+  form.totalCalories = 240
   form.note = ''
   editingExerciseId.value = null
+  useManualTotalCalories.value = false
 }
 
 function openCreateDialog() {
@@ -70,9 +77,30 @@ function openEditDialog(record: ExerciseRecord) {
   form.exerciseName = record.exerciseName
   form.durationMinutes = record.durationMinutes
   form.caloriesPerMinute = record.caloriesPerMinute
+  form.totalCalories = record.totalCalories
   form.note = record.note
+  useManualTotalCalories.value = record.totalCalories !== record.durationMinutes * record.caloriesPerMinute
   isDialogVisible.value = true
 }
+
+watch(
+  () => [form.durationMinutes, form.caloriesPerMinute],
+  () => {
+    if (!useManualTotalCalories.value) {
+      form.totalCalories = calculatedTotalCalories.value
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => useManualTotalCalories.value,
+  (isManual) => {
+    if (!isManual) {
+      form.totalCalories = calculatedTotalCalories.value
+    }
+  },
+)
 
 async function fetchExercises() {
   if (!authStore.userId) {
@@ -269,8 +297,22 @@ onMounted(async () => {
           <el-input-number v-model="form.caloriesPerMinute" :min="1" :step="1" />
         </el-form-item>
 
-        <el-form-item label="總消耗">
-          <el-input :model-value="`${form.durationMinutes * form.caloriesPerMinute} kcal`" readonly />
+        <el-form-item label="總消耗模式" class="form-item-span-2">
+          <el-segmented
+            v-model="useManualTotalCalories"
+            :options="[
+              { label: '自動計算', value: false },
+              { label: '手動輸入', value: true },
+            ]"
+          />
+        </el-form-item>
+
+        <el-form-item v-if="useManualTotalCalories" label="總消耗 (kcal)">
+          <el-input-number v-model="form.totalCalories" :min="1" :step="10" />
+        </el-form-item>
+
+        <el-form-item v-else label="總消耗">
+          <el-input :model-value="`${calculatedTotalCalories} kcal`" readonly />
         </el-form-item>
 
         <el-form-item label="備註" prop="note" class="form-item-span-2">

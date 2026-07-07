@@ -32,33 +32,69 @@ const weightStats = computed(() => buildWeightTrendStats(weightsStore.records))
 
 const last7Days = computed(() => getLastItems(calorieStats.value, 7))
 const last30Days = computed(() => getLastItems(calorieStats.value, 30))
+const displayedCalorieStats = computed(() => getLastItems(calorieStats.value, 14))
 
 const weeklyAverageIntake = computed(() => calculateAverage(last7Days.value.map((item) => item.intake)))
 const weeklyAverageBurn = computed(() => calculateAverage(last7Days.value.map((item) => item.burn)))
 const weeklyAverageExerciseBurn = computed(() => calculateAverage(last7Days.value.map((item) => item.exerciseBurn)))
 const monthlyAverageNet = computed(() => calculateAverage(last30Days.value.map((item) => item.net)))
 const latestWeight = computed(() => getLastItems(weightStats.value, 1)[0]?.weight ?? 0)
+const deficitDays = computed(() => displayedCalorieStats.value.filter((item) => item.net < 0))
+const peakIntakeDay = computed(() =>
+  displayedCalorieStats.value.reduce<(typeof displayedCalorieStats.value)[number] | null>(
+    (max, item) => (!max || item.intake > max.intake ? item : max),
+    null,
+  ),
+)
+const highestBurnDay = computed(() =>
+  displayedCalorieStats.value.reduce<(typeof displayedCalorieStats.value)[number] | null>(
+    (max, item) => (!max || item.burn > max.burn ? item : max),
+    null,
+  ),
+)
+const bestDeficitDay = computed(() =>
+  deficitDays.value.reduce<(typeof deficitDays.value)[number] | null>(
+    (best, item) => (!best || item.net < best.net ? item : best),
+    null,
+  ),
+)
 
 const calorieChartOption = computed<EChartsOption>(() => ({
+  animationDuration: 550,
+  color: ['#f0a35e', '#7fb8ff', '#ffb454', '#2d7a56'],
   tooltip: {
     trigger: 'axis',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    borderColor: 'rgba(36, 50, 51, 0.08)',
+    textStyle: {
+      color: '#243233',
+    },
+    valueFormatter: (value) => `${value} kcal`,
   },
   legend: {
     top: 0,
     data: ['攝取熱量', '基礎代謝 BMR', '總消耗', '淨熱量'],
+    textStyle: {
+      color: '#617070',
+    },
   },
   grid: {
-    left: 16,
-    right: 16,
-    bottom: 16,
-    top: 48,
+    left: 18,
+    right: 20,
+    bottom: 18,
+    top: 56,
     containLabel: true,
   },
   xAxis: {
     type: 'category',
-    data: calorieStats.value.map((item) => item.date),
+    data: displayedCalorieStats.value.map((item) => item.date.slice(5)),
     axisLabel: {
       color: '#617070',
+    },
+    axisLine: {
+      lineStyle: {
+        color: 'rgba(36, 50, 51, 0.14)',
+      },
     },
   },
   yAxis: {
@@ -66,12 +102,18 @@ const calorieChartOption = computed<EChartsOption>(() => ({
     axisLabel: {
       color: '#617070',
     },
+    splitLine: {
+      lineStyle: {
+        color: 'rgba(36, 50, 51, 0.08)',
+      },
+    },
   },
   series: [
     {
       name: '攝取熱量',
       type: 'bar',
-      data: calorieStats.value.map((item) => item.intake),
+      barMaxWidth: 18,
+      data: displayedCalorieStats.value.map((item) => item.intake),
       itemStyle: {
         color: '#f5a46b',
         borderRadius: [8, 8, 0, 0],
@@ -82,7 +124,7 @@ const calorieChartOption = computed<EChartsOption>(() => ({
       type: 'line',
       smooth: true,
       symbol: 'none',
-      data: calorieStats.value.map((item) => item.basalBurn),
+      data: displayedCalorieStats.value.map((item) => item.basalBurn),
       lineStyle: {
         color: '#ffb454',
         type: 'dashed',
@@ -92,7 +134,8 @@ const calorieChartOption = computed<EChartsOption>(() => ({
     {
       name: '總消耗',
       type: 'bar',
-      data: calorieStats.value.map((item) => item.burn),
+      barMaxWidth: 18,
+      data: displayedCalorieStats.value.map((item) => item.burn),
       itemStyle: {
         color: '#72b7ff',
         borderRadius: [8, 8, 0, 0],
@@ -102,7 +145,7 @@ const calorieChartOption = computed<EChartsOption>(() => ({
       name: '淨熱量',
       type: 'line',
       smooth: true,
-      data: calorieStats.value.map((item) => item.net),
+      data: displayedCalorieStats.value.map((item) => item.net),
       lineStyle: {
         color: '#2d7a56',
         width: 3,
@@ -110,6 +153,50 @@ const calorieChartOption = computed<EChartsOption>(() => ({
       itemStyle: {
         color: '#2d7a56',
       },
+      areaStyle: {
+        color: 'rgba(45, 122, 86, 0.08)',
+      },
+    },
+    {
+      name: '赤字日',
+      type: 'scatter',
+      symbol: 'roundRect',
+      symbolSize: [12, 12],
+      itemStyle: {
+        color: '#be185d',
+      },
+      label: {
+        show: true,
+        position: 'top',
+        distance: 14,
+        formatter: (params) => {
+          const value = typeof params.data === 'object' && params.data && 'net' in params.data
+            ? Math.round(Math.abs(Number(params.data.net)))
+            : 0
+
+          return `{deficit|赤字 ${value}}`
+        },
+        rich: {
+          deficit: {
+            color: '#9f1239',
+            backgroundColor: '#ffe4ea',
+            borderColor: 'rgba(190, 24, 93, 0.24)',
+            borderWidth: 1,
+            borderRadius: 999,
+            padding: [5, 10],
+            fontSize: 12,
+            fontWeight: 700,
+          },
+        },
+      },
+      data: displayedCalorieStats.value.map((item) =>
+        item.net < 0
+          ? {
+              value: item.net,
+              net: item.net,
+            }
+          : null,
+      ),
     },
   ],
 }))
@@ -220,11 +307,34 @@ onMounted(async () => {
             <div class="card-header">
               <div>
                 <span>每日熱量統計</span>
-                <p class="card-subtitle">攝取、BMR、總消耗與淨熱量的日別趨勢</p>
+                <p class="card-subtitle">聚焦最近 14 天的攝取、總消耗、BMR 與淨熱量節奏。</p>
               </div>
-              <el-tag type="success" effect="plain">近 {{ calorieStats.length }} 天</el-tag>
+              <div class="statistics-tag-group">
+                <el-tag type="success" effect="plain">近 {{ displayedCalorieStats.length }} 天</el-tag>
+                <el-tag type="danger" effect="plain">{{ deficitDays.length }} 天赤字</el-tag>
+              </div>
             </div>
           </template>
+
+          <div class="statistics-insight-grid">
+            <article class="statistics-insight-card statistics-insight-card--warm">
+              <span>最高攝取日</span>
+              <strong>{{ peakIntakeDay ? `${peakIntakeDay.intake} kcal` : '--' }}</strong>
+              <p>{{ peakIntakeDay ? peakIntakeDay.date : '尚無資料' }}</p>
+            </article>
+
+            <article class="statistics-insight-card statistics-insight-card--cool">
+              <span>最高總消耗日</span>
+              <strong>{{ highestBurnDay ? `${highestBurnDay.burn} kcal` : '--' }}</strong>
+              <p>{{ highestBurnDay ? highestBurnDay.date : '尚無資料' }}</p>
+            </article>
+
+            <article class="statistics-insight-card statistics-insight-card--rose">
+              <span>最佳赤字日</span>
+              <strong>{{ bestDeficitDay ? `${Math.round(Math.abs(bestDeficitDay.net))} kcal` : '--' }}</strong>
+              <p>{{ bestDeficitDay ? bestDeficitDay.date : '目前沒有赤字日' }}</p>
+            </article>
+          </div>
 
           <StatisticsChart :option="calorieChartOption" />
         </el-card>
@@ -278,3 +388,73 @@ onMounted(async () => {
     </el-card>
   </div>
 </template>
+
+<style scoped>
+.statistics-tag-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.statistics-insight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.statistics-insight-card {
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.46);
+  box-shadow:
+    0 14px 28px rgba(33, 58, 55, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.statistics-insight-card span,
+.statistics-insight-card p {
+  color: var(--text-muted);
+}
+
+.statistics-insight-card span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.statistics-insight-card strong {
+  display: block;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.statistics-insight-card p {
+  margin: 8px 0 0;
+}
+
+.statistics-insight-card--warm {
+  background:
+    radial-gradient(circle at top right, rgba(255, 182, 117, 0.22), transparent 28%),
+    linear-gradient(145deg, rgba(255, 245, 232, 0.88), rgba(255, 229, 198, 0.44));
+}
+
+.statistics-insight-card--cool {
+  background:
+    radial-gradient(circle at top right, rgba(120, 184, 255, 0.22), transparent 28%),
+    linear-gradient(145deg, rgba(241, 248, 255, 0.88), rgba(216, 233, 255, 0.44));
+}
+
+.statistics-insight-card--rose {
+  background:
+    radial-gradient(circle at top right, rgba(255, 138, 176, 0.22), transparent 28%),
+    linear-gradient(145deg, rgba(255, 245, 248, 0.88), rgba(255, 223, 233, 0.44));
+}
+
+@media (max-width: 768px) {
+  .statistics-insight-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

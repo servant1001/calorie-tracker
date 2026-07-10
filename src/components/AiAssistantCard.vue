@@ -2,9 +2,14 @@
 import { Bot, Brain, Camera, ImagePlus, Leaf, Sparkles, Utensils, Wheat } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
-import { analyzeDietaryGap, analyzeMealPhoto, generateDailySummary, parseFoodText } from '@/api/ai'
+import { analyzeDietaryGap, analyzeMealPhoto, generateDailySummary, generateMealRecommendation, parseFoodText } from '@/api/ai'
 import { useFoodsStore } from '@/stores/foods'
-import type { DailySummaryResponse, DietaryGapResponse, DietaryGapStatus } from '@/types/ai'
+import type {
+  DailySummaryResponse,
+  DietaryGapResponse,
+  DietaryGapStatus,
+  MealRecommendationResponse,
+} from '@/types/ai'
 import type { ActivityLevel, MealType } from '@/types/common'
 import type { ExerciseRecord } from '@/types/exercise'
 import type { FoodFormPayload, FoodRecord } from '@/types/food'
@@ -26,6 +31,7 @@ const props = defineProps<{
   currentWeight: number
   dailyExerciseGoal: number
   dailyGoal: number
+  dietaryPreferences: string[]
   exercises: ExerciseRecord[]
   exerciseTotal: number
   foods: FoodRecord[]
@@ -66,6 +72,9 @@ const isGeneratingSummary = ref(false)
 const summary = ref<DailySummaryResponse | null>(null)
 const isAnalyzingDietaryGap = ref(false)
 const dietaryGap = ref<DietaryGapResponse | null>(null)
+const nextMealType = ref<MealType>(getSuggestedMealType())
+const isGeneratingMealRecommendation = ref(false)
+const mealRecommendation = ref<MealRecommendationResponse | null>(null)
 
 const parsedTotalCalories = computed(() =>
   parsedItems.value.reduce((sum, item) => sum + Math.round(item.quantity * item.caloriesPerUnit), 0),
@@ -322,6 +331,28 @@ async function handleGenerateSummary() {
   }
 }
 
+function getSuggestedMealType(): MealType {
+  const hour = new Date().getHours()
+
+  if (hour < 10) {
+    return 'breakfast'
+  }
+
+  if (hour < 14) {
+    return 'lunch'
+  }
+
+  if (hour < 21) {
+    return 'dinner'
+  }
+
+  return 'snack'
+}
+
+function getMealLabel(mealType: MealType) {
+  return mealOptions.find((option) => option.value === mealType)?.label ?? '下一餐'
+}
+
 function getGapStatusLabel(status: DietaryGapStatus) {
   if (status === 'adequate') {
     return '充足'
@@ -359,11 +390,35 @@ async function handleAnalyzeDietaryGap() {
   }
 }
 
+async function handleGenerateMealRecommendation() {
+  isGeneratingMealRecommendation.value = true
+
+  try {
+    mealRecommendation.value = await generateMealRecommendation({
+      recordDate: props.recordDate,
+      mealType: nextMealType.value,
+      dailyGoal: props.dailyGoal,
+      currentWeight: props.currentWeight,
+      targetWeight: props.targetWeight,
+      intakeTotal: props.intakeTotal,
+      exerciseTotal: props.exerciseTotal,
+      dailyExerciseGoal: props.dailyExerciseGoal,
+      dietaryPreferences: props.dietaryPreferences,
+      foods: props.foods,
+    })
+  } catch (error) {
+    showError(error, 'AI 個人化餐點建議失敗，請稍後再試。')
+  } finally {
+    isGeneratingMealRecommendation.value = false
+  }
+}
+
 watch(
   () => props.recordDate,
   () => {
     summary.value = null
     dietaryGap.value = null
+    mealRecommendation.value = null
     resetParsedItems()
     inputText.value = ''
     resetMealPhoto()
@@ -633,6 +688,61 @@ watch(
               <li v-for="item in dietaryGap.highlights" :key="item">{{ item }}</li>
             </ul>
             <p class="dietary-gap-disclaimer">{{ dietaryGap.disclaimer }}</p>
+          </div>
+        </section>
+
+        <section class="meal-recommendation-section">
+          <div class="meal-recommendation-section__heading">
+            <div>
+              <strong>個人化下一餐建議</strong>
+              <p>依剩餘熱量、目標體重、運動量與你的飲食偏好安排下一餐。</p>
+            </div>
+          </div>
+
+          <div class="meal-recommendation-controls">
+            <el-select v-model="nextMealType" aria-label="選擇要推薦的餐別">
+              <el-option
+                v-for="option in mealOptions"
+                :key="option.value"
+                :label="`推薦${option.label}`"
+                :value="option.value"
+              />
+            </el-select>
+            <el-button type="primary" :loading="isGeneratingMealRecommendation" @click="handleGenerateMealRecommendation">
+              取得餐點建議
+            </el-button>
+          </div>
+
+          <div v-if="mealRecommendation" class="meal-recommendation-result">
+            <div class="meal-recommendation-result__summary">
+              <div>
+                <span>{{ getMealLabel(mealRecommendation.mealType) }}可用熱量</span>
+                <strong>{{ Math.round(mealRecommendation.remainingCalories) }} kcal</strong>
+              </div>
+              <p>{{ mealRecommendation.summary }}</p>
+            </div>
+
+            <article v-for="recommendation in mealRecommendation.recommendations" :key="recommendation.name" class="meal-recommendation-card">
+              <div class="meal-recommendation-card__top">
+                <div>
+                  <strong>{{ recommendation.name }}</strong>
+                  <p>{{ recommendation.description }}</p>
+                </div>
+                <el-tag round effect="dark" type="success">約 {{ Math.round(recommendation.estimatedCalories) }} kcal</el-tag>
+              </div>
+
+              <ul class="meal-recommendation-card__items">
+                <li v-for="item in recommendation.items" :key="`${item.name}-${item.portion}`">
+                  <span>{{ item.name }} · {{ item.portion }}</span>
+                  <strong>{{ Math.round(item.estimatedCalories) }} kcal</strong>
+                </li>
+              </ul>
+              <p class="meal-recommendation-card__reason">{{ recommendation.reason }}</p>
+            </article>
+
+            <p class="meal-recommendation-notice">
+              {{ mealRecommendation.notice }} · {{ mealRecommendation.provider }} · {{ mealRecommendation.model }}
+            </p>
           </div>
         </section>
 
@@ -1072,6 +1182,131 @@ watch(
   line-height: 1.5;
 }
 
+.meal-recommendation-section {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(72, 104, 92, 0.12);
+}
+
+.meal-recommendation-section__heading strong {
+  display: block;
+  font-size: 16px;
+}
+
+.meal-recommendation-section__heading p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.meal-recommendation-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.meal-recommendation-result {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.meal-recommendation-result__summary {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(255, 244, 224, 0.72), rgba(255, 237, 205, 0.42));
+}
+
+.meal-recommendation-result__summary div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.meal-recommendation-result__summary span {
+  color: #8b652d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.meal-recommendation-result__summary strong {
+  color: #7a4d0f;
+  font-size: 21px;
+}
+
+.meal-recommendation-result__summary p {
+  margin: 7px 0 0;
+  line-height: 1.6;
+}
+
+.meal-recommendation-card {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.meal-recommendation-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.meal-recommendation-card__top strong {
+  display: block;
+  font-size: 15px;
+}
+
+.meal-recommendation-card__top p,
+.meal-recommendation-card__reason {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.meal-recommendation-card__items {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.meal-recommendation-card__items li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(244, 249, 244, 0.62);
+  color: var(--text-main);
+  font-size: 13px;
+}
+
+.meal-recommendation-card__items strong {
+  flex: 0 0 auto;
+  color: #267a59;
+  font-size: 12px;
+}
+
+.meal-recommendation-card__reason {
+  padding-top: 10px;
+  border-top: 1px solid rgba(72, 104, 92, 0.1);
+}
+
+.meal-recommendation-notice {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .summary-result {
   display: flex;
   flex-direction: column;
@@ -1170,6 +1405,10 @@ watch(
   .dietary-gap-section__heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .meal-recommendation-controls {
+    grid-template-columns: 1fr;
   }
 }
 </style>

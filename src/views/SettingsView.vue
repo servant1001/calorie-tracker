@@ -23,6 +23,7 @@ const form = reactive<UserProfile>({
   dailyGoal: 2200,
   dailyExerciseGoal: 300,
   activityLevel: 'medium',
+  dietaryPreferences: [],
 })
 
 const currentBmi = computed(() => calculateBmi(form.weight, form.height))
@@ -164,6 +165,23 @@ onMounted(async () => {
             <el-option label="中" value="medium" />
             <el-option label="高" value="high" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="飲食偏好" class="form-item-span-2">
+          <el-select
+            v-model="form.dietaryPreferences"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="可選擇 AI 餐點建議偏好"
+          >
+            <el-option label="高蛋白" value="高蛋白" />
+            <el-option label="低醣" value="低醣" />
+            <el-option label="低脂少油" value="低脂少油" />
+            <el-option label="蔬食優先" value="蔬食優先" />
+            <el-option label="快速方便" value="快速方便" />
+            <el-option label="台式家常" value="台式家常" />
+          </el-select>
+          <div class="card-subtitle">會套用在 AI 個人化下一餐建議，未選擇時 AI 會提供均衡建議。</div>
         </el-form-item>
       </el-form>
     </el-card>

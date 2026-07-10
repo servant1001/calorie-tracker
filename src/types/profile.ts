@@ -10,4 +10,5 @@ export interface UserProfile {
   dailyGoal: number
   dailyExerciseGoal: number
   activityLevel: ActivityLevel
+  dietaryPreferences: string[]
 }

@@ -4,6 +4,8 @@ import type {
   DailySummaryRequest,
   DailySummaryResponse,
   MealPhotoRequest,
+  MealRecommendationRequest,
+  MealRecommendationResponse,
   ParseFoodTextRequest,
   ParseFoodTextResponse,
 } from '@/types/ai'
@@ -59,4 +61,8 @@ export function generateDailySummary(payload: DailySummaryRequest) {
 
 export function analyzeDietaryGap(payload: DietaryGapRequest) {
   return postJson<DietaryGapResponse>('dietary-gap', payload)
+}
+
+export function generateMealRecommendation(payload: MealRecommendationRequest) {
+  return postJson<MealRecommendationResponse>('meal-recommendation', payload)
 }

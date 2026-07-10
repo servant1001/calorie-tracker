@@ -106,3 +106,36 @@ export interface DietaryGapResponse {
   provider: string
   model: string
 }
+
+export interface MealRecommendationRequest {
+  recordDate: string
+  mealType: MealType
+  dailyGoal: number
+  currentWeight: number
+  targetWeight: number
+  intakeTotal: number
+  exerciseTotal: number
+  dailyExerciseGoal: number
+  dietaryPreferences: string[]
+  foods: FoodRecord[]
+}
+
+export interface MealRecommendationResponse {
+  remainingCalories: number
+  mealType: MealType
+  summary: string
+  recommendations: Array<{
+    name: string
+    estimatedCalories: number
+    description: string
+    items: Array<{
+      name: string
+      portion: string
+      estimatedCalories: number
+    }>
+    reason: string
+  }>
+  notice: string
+  provider: string
+  model: string
+}

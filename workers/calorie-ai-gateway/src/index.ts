@@ -15,12 +15,19 @@ import {
   buildDietaryGapUserPrompt,
   dietaryGapSchema,
 } from './prompts/dietaryGap'
+import {
+  buildMealRecommendationSystemPrompt,
+  buildMealRecommendationUserPrompt,
+  mealRecommendationSchema,
+} from './prompts/mealRecommendation'
 import type {
   DailySummaryBody,
   DailySummaryResult,
   DietaryGapBody,
   DietaryGapResult,
   Env,
+  MealRecommendationBody,
+  MealRecommendationResult,
   MealPhotoBody,
   ParseFoodTextBody,
   ParseFoodTextResult,
@@ -141,6 +148,23 @@ async function handleDietaryGap(env: Env, request: Request) {
   })
 }
 
+async function handleMealRecommendation(env: Env, request: Request) {
+  const body = await parseJsonBody<MealRecommendationBody>(request)
+
+  const response = await generateStructuredOutput<MealRecommendationResult>(env, {
+    schemaName: 'meal_recommendation_result',
+    schema: mealRecommendationSchema as unknown as Record<string, unknown>,
+    systemPrompt: buildMealRecommendationSystemPrompt(),
+    userPrompt: buildMealRecommendationUserPrompt(body),
+  })
+
+  return jsonResponse({
+    ...response.data,
+    provider: response.provider,
+    model: response.model,
+  })
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
@@ -164,6 +188,8 @@ export default {
         response = await handleDailySummary(env, request)
       } else if (request.method === 'POST' && url.pathname === '/api/ai/dietary-gap') {
         response = await handleDietaryGap(env, request)
+      } else if (request.method === 'POST' && url.pathname === '/api/ai/meal-recommendation') {
+        response = await handleMealRecommendation(env, request)
       } else if (request.method === 'GET' && url.pathname === '/health') {
         response = jsonResponse({ ok: true, service: 'calorie-ai-gateway' })
       } else {

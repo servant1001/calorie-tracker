@@ -15,6 +15,7 @@ function createDefaultProfile(): UserProfile {
     dailyGoal: 2200,
     dailyExerciseGoal: 300,
     activityLevel: 'medium',
+    dietaryPreferences: [],
   }
 }
 
@@ -39,7 +40,13 @@ export const useProfileStore = defineStore('profile', () => {
       const nextProfile = await getUserProfile(userId)
 
       if (nextProfile) {
-        profile.value = nextProfile
+        profile.value = {
+          ...createDefaultProfile(),
+          ...nextProfile,
+          dietaryPreferences: Array.isArray(nextProfile.dietaryPreferences)
+            ? nextProfile.dietaryPreferences
+            : [],
+        }
       }
     } finally {
       isLoading.value = false

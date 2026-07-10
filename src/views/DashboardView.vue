@@ -585,6 +585,7 @@ onMounted(async () => {
       :activity-level="profileStore.profile.activityLevel"
       :daily-goal="dailyGoal"
       :daily-exercise-goal="dailyExerciseGoal"
+      :dietary-preferences="profileStore.profile.dietaryPreferences"
       :current-weight="summary.currentWeight"
       :target-weight="profileStore.profile.targetWeight"
       :intake-total="summary.totalIntake"

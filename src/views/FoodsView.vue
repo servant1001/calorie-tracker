@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
 import { Calendar, Delete, EditPen, Plus, RefreshRight } from '@element-plus/icons-vue'
+import { Camera, ImagePlus, Sparkles } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
+import { analyzeMealPhoto, parseFoodText } from '@/api/ai'
 import { MEAL_TYPE_LABEL_MAP, MEAL_TYPE_OPTIONS } from '@/constants/food'
 import { useAuthStore } from '@/stores/auth'
 import { useFoodsStore } from '@/stores/foods'
 import type { MealType } from '@/types/common'
+import type { AiParsedFoodItem } from '@/types/ai'
 import type { FoodFormPayload, FoodRecord } from '@/types/food'
 import { formatDate } from '@/utils/date'
+import { createOptimizedMealPhotoDataUrl } from '@/utils/image'
 import { showError, showSuccess } from '@/utils/message'
 
 const authStore = useAuthStore()
@@ -18,6 +22,18 @@ const isDialogVisible = ref(false)
 const isSubmitting = ref(false)
 const editingFoodId = ref<string | null>(null)
 const useManualTotalCalories = ref(false)
+const isAiAssistVisible = ref(false)
+const aiFoodText = ref('')
+const aiSuggestions = ref<AiParsedFoodItem[]>([])
+const aiNotice = ref('')
+const aiProviderLabel = ref('')
+const aiConfidence = ref(0)
+const isAiParsing = ref(false)
+const isAiAnalyzingPhoto = ref(false)
+const isSavingAiSuggestions = ref(false)
+const aiPhotoDataUrl = ref('')
+const aiPhotoFileName = ref('')
+const aiPhotoInputRef = ref<HTMLInputElement>()
 
 const filters = reactive({
   recordDate: formatDate(new Date()),
@@ -51,6 +67,9 @@ const todayCount = computed(() => filteredRecords.value.length)
 const calculatedTotalCalories = computed(() =>
   Math.round(form.quantity * form.caloriesPerUnit),
 )
+const aiSuggestionsTotalCalories = computed(() =>
+  aiSuggestions.value.reduce((total, item) => total + Math.round(Number(item.totalCalories) || 0), 0),
+)
 
 watch(
   () => [filters.recordDate, filters.mealType] as const,
@@ -71,6 +90,7 @@ function resetForm() {
   form.note = ''
   editingFoodId.value = null
   useManualTotalCalories.value = false
+  resetAiAssist()
 }
 
 function openCreateDialog() {
@@ -90,6 +110,176 @@ function openEditDialog(record: FoodRecord) {
   form.note = record.note
   useManualTotalCalories.value = record.totalCalories !== record.quantity * record.caloriesPerUnit
   isDialogVisible.value = true
+}
+
+function resetAiAssist() {
+  isAiAssistVisible.value = false
+  aiFoodText.value = ''
+  aiSuggestions.value = []
+  aiNotice.value = ''
+  aiProviderLabel.value = ''
+  aiConfidence.value = 0
+  aiPhotoDataUrl.value = ''
+  aiPhotoFileName.value = ''
+
+  if (aiPhotoInputRef.value) {
+    aiPhotoInputRef.value.value = ''
+  }
+}
+
+function setAiSuggestions(
+  items: AiParsedFoodItem[],
+  meta: { confidence: number; notice: string; provider: string; model: string },
+) {
+  aiSuggestions.value = items
+  aiNotice.value = meta.notice
+  aiConfidence.value = Math.round(meta.confidence * 100)
+  aiProviderLabel.value = `${meta.provider} · ${meta.model}`
+}
+
+function applyAiSuggestion(item: AiParsedFoodItem) {
+  form.mealType = item.mealType
+  form.foodName = item.foodName
+  form.quantity = item.quantity
+  form.unit = item.unit
+  form.caloriesPerUnit = item.caloriesPerUnit
+  form.totalCalories = item.totalCalories
+  form.note = item.note
+  useManualTotalCalories.value = item.totalCalories !== Math.round(item.quantity * item.caloriesPerUnit)
+  showSuccess(`已套用「${item.foodName}」的 AI 建議，請確認後儲存。`)
+}
+
+function removeAiSuggestion(index: number) {
+  aiSuggestions.value.splice(index, 1)
+}
+
+async function handleSaveAllAiSuggestions() {
+  if (!authStore.userId) {
+    return
+  }
+
+  const payloads = aiSuggestions.value
+    .map<FoodFormPayload | null>((item) => {
+      const foodName = item.foodName.trim()
+      const quantity = Number(item.quantity)
+      const caloriesPerUnit = Number(item.caloriesPerUnit)
+      const totalCalories = Math.round(Number(item.totalCalories))
+
+      if (!foodName || quantity <= 0 || caloriesPerUnit < 0 || totalCalories < 0) {
+        return null
+      }
+
+      return {
+        recordDate: form.recordDate,
+        mealType: item.mealType,
+        foodName,
+        quantity,
+        unit: item.unit.trim() || '份',
+        caloriesPerUnit,
+        totalCalories,
+        note: item.note.trim(),
+      }
+    })
+    .filter((item): item is FoodFormPayload => Boolean(item))
+
+  if (payloads.length !== aiSuggestions.value.length) {
+    showError(new Error('請確認每個項目都有食物名稱、有效份量與熱量。'))
+    return
+  }
+
+  isSavingAiSuggestions.value = true
+
+  try {
+    for (const payload of payloads) {
+      await foodsStore.addFood(authStore.userId, payload)
+    }
+
+    await fetchFoods()
+    showSuccess(`已新增 ${payloads.length} 筆 AI 飲食紀錄。`)
+    isDialogVisible.value = false
+    resetForm()
+  } catch (error) {
+    showError(error, '保存 AI 飲食紀錄失敗，請稍後再試。')
+  } finally {
+    isSavingAiSuggestions.value = false
+  }
+}
+
+async function handleAiParseText() {
+  if (!aiFoodText.value.trim()) {
+    showError(new Error('請先輸入餐點描述。'))
+    return
+  }
+
+  isAiParsing.value = true
+
+  try {
+    const response = await parseFoodText({
+      text: aiFoodText.value.trim(),
+      recordDate: form.recordDate,
+      locale: 'zh-TW',
+    })
+    setAiSuggestions(response.items, response)
+
+    if (!response.items.length) {
+      showError(new Error('AI 沒有解析出可套用的餐點，請改用更具體的描述。'))
+    }
+  } catch (error) {
+    showError(error, 'AI 飲食解析失敗，請稍後再試。')
+  } finally {
+    isAiParsing.value = false
+  }
+}
+
+function triggerAiPhotoPicker() {
+  aiPhotoInputRef.value?.click()
+}
+
+async function handleAiPhotoPicked(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  if (!file.type.startsWith('image/')) {
+    showError(new Error('請選擇圖片檔案。'))
+    return
+  }
+
+  try {
+    aiPhotoDataUrl.value = await createOptimizedMealPhotoDataUrl(file)
+    aiPhotoFileName.value = file.name
+  } catch (error) {
+    showError(error, '餐點照片處理失敗，請換一張照片再試。')
+  }
+}
+
+async function handleAiAnalyzePhoto() {
+  if (!aiPhotoDataUrl.value) {
+    showError(new Error('請先選擇一張餐點照片。'))
+    return
+  }
+
+  isAiAnalyzingPhoto.value = true
+
+  try {
+    const response = await analyzeMealPhoto({
+      imageUrl: aiPhotoDataUrl.value,
+      recordDate: form.recordDate,
+      locale: 'zh-TW',
+    })
+    setAiSuggestions(response.items, response)
+
+    if (!response.items.length) {
+      showError(new Error('AI 沒有辨識出可套用的餐點，請換張更清楚的照片。'))
+    }
+  } catch (error) {
+    showError(error, 'AI 餐點辨識失敗，請稍後再試。')
+  } finally {
+    isAiAnalyzingPhoto.value = false
+  }
 }
 
 watch(
@@ -296,6 +486,134 @@ onMounted(async () => {
       @closed="resetForm"
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="settings-grid">
+        <section v-if="!editingFoodId" class="food-ai-assist form-item-span-2">
+          <button
+            class="food-ai-assist__trigger"
+            type="button"
+            :aria-expanded="isAiAssistVisible"
+            @click="isAiAssistVisible = !isAiAssistVisible"
+          >
+            <span class="food-ai-assist__icon"><Sparkles :size="17" /></span>
+            <span>
+              <strong>AI 快速填入餐點</strong>
+              <small>輸入描述或上傳照片，AI 會建立可確認的飲食建議</small>
+            </span>
+            <el-tag round effect="plain" type="success">{{ isAiAssistVisible ? '收合' : '使用 AI' }}</el-tag>
+          </button>
+
+          <div v-if="isAiAssistVisible" class="food-ai-assist__content">
+            <div class="food-ai-assist__sources">
+              <div class="food-ai-assist__source">
+                <label for="ai-food-description">描述餐點</label>
+                <el-input
+                  id="ai-food-description"
+                  v-model="aiFoodText"
+                  type="textarea"
+                  :rows="3"
+                  resize="none"
+                  placeholder="例如：午餐吃雞胸肉沙拉一份、無糖拿鐵一杯"
+                />
+                <el-button type="primary" :loading="isAiParsing" @click="handleAiParseText">
+                  AI 解析文字
+                </el-button>
+              </div>
+
+              <div class="food-ai-assist__source food-ai-assist__source--photo">
+                <label>拍照辨識</label>
+                <input
+                  ref="aiPhotoInputRef"
+                  class="food-ai-assist__file-input"
+                  type="file"
+                  accept="image/*"
+                  @change="handleAiPhotoPicked"
+                >
+                <div class="food-ai-assist__photo-state">
+                  <img v-if="aiPhotoDataUrl" :src="aiPhotoDataUrl" :alt="aiPhotoFileName" decoding="async">
+                  <ImagePlus v-else :size="21" />
+                  <span>{{ aiPhotoFileName || '選擇清楚的餐點照片' }}</span>
+                </div>
+                <div class="food-ai-assist__photo-actions">
+                  <el-button plain :icon="Camera" @click="triggerAiPhotoPicker">選擇照片</el-button>
+                  <el-button type="primary" :loading="isAiAnalyzingPhoto" @click="handleAiAnalyzePhoto">
+                    AI 辨識照片
+                  </el-button>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="aiNotice || aiProviderLabel" class="food-ai-assist__meta">
+              <el-tag v-if="aiNotice" round effect="plain" type="warning">{{ aiNotice }}</el-tag>
+              <el-tag v-if="aiConfidence" round effect="plain">信心 {{ aiConfidence }}%</el-tag>
+              <span v-if="aiProviderLabel">{{ aiProviderLabel }}</span>
+            </div>
+
+            <div v-if="aiSuggestions.length" class="food-ai-assist__suggestions">
+              <div class="food-ai-assist__suggestions-title">
+                <div>
+                  <strong>AI 建議項目</strong>
+                  <span>逐筆確認後，可一次採納所有項目</span>
+                </div>
+                <div class="food-ai-assist__batch-total">
+                  <span>合計</span>
+                  <strong>{{ aiSuggestionsTotalCalories }} kcal</strong>
+                </div>
+              </div>
+              <article v-for="(item, index) in aiSuggestions" :key="`${item.foodName}-${index}`" class="food-ai-suggestion">
+                <div class="food-ai-suggestion__top">
+                  <strong>項目 {{ index + 1 }}</strong>
+                  <div>
+                    <el-button text type="primary" @click="applyAiSuggestion(item)">套用單筆</el-button>
+                    <el-button text type="danger" @click="removeAiSuggestion(index)">移除</el-button>
+                  </div>
+                </div>
+                <div class="food-ai-suggestion__fields">
+                  <label>
+                    <span>食物名稱</span>
+                    <el-input v-model="item.foodName" />
+                  </label>
+                  <label>
+                    <span>餐別</span>
+                    <el-select v-model="item.mealType">
+                      <el-option
+                        v-for="option in MEAL_TYPE_OPTIONS"
+                        :key="option.value"
+                        :label="option.label"
+                        :value="option.value"
+                      />
+                    </el-select>
+                  </label>
+                  <label>
+                    <span>份量</span>
+                    <el-input-number v-model="item.quantity" :min="0.1" :step="0.5" :precision="1" />
+                  </label>
+                  <label>
+                    <span>單位</span>
+                    <el-input v-model="item.unit" />
+                  </label>
+                  <label>
+                    <span>每份熱量</span>
+                    <el-input-number v-model="item.caloriesPerUnit" :min="0" :step="10" />
+                  </label>
+                  <label>
+                    <span>總熱量 (kcal)</span>
+                    <el-input-number v-model="item.totalCalories" :min="0" :step="10" />
+                  </label>
+                </div>
+                <label class="food-ai-suggestion__note">
+                  <span>備註</span>
+                  <el-input v-model="item.note" placeholder="可補充品牌、烹調方式等資訊" />
+                </label>
+              </article>
+              <div class="food-ai-assist__save-all">
+                <span>確認每筆資料後，一次建立 {{ aiSuggestions.length }} 筆飲食紀錄。</span>
+                <el-button type="success" :loading="isSavingAiSuggestions" @click="handleSaveAllAiSuggestions">
+                  全部採納並保存
+                </el-button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <el-form-item label="日期" prop="recordDate">
           <el-date-picker
             v-model="form.recordDate"
@@ -364,3 +682,219 @@ onMounted(async () => {
     </el-dialog>
   </div>
 </template>
+
+<style scoped>
+.food-ai-assist {
+  overflow: hidden;
+  margin-bottom: 18px;
+  border: 1px solid rgba(75, 174, 137, 0.22);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(224, 250, 239, 0.72), rgba(235, 245, 255, 0.66));
+}
+
+.food-ai-assist__trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text-main);
+  text-align: left;
+  cursor: pointer;
+}
+
+.food-ai-assist__trigger > span:nth-child(2) {
+  flex: 1;
+}
+
+.food-ai-assist__trigger strong,
+.food-ai-assist__trigger small {
+  display: block;
+}
+
+.food-ai-assist__trigger small {
+  margin-top: 3px;
+  color: var(--text-muted);
+}
+
+.food-ai-assist__icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  color: #20835f;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.food-ai-assist__content {
+  padding: 0 16px 16px;
+}
+
+.food-ai-assist__sources {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.food-ai-assist__source {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.food-ai-assist__source label,
+.food-ai-assist__suggestions-title strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.food-ai-assist__file-input {
+  display: none;
+}
+
+.food-ai-assist__photo-state {
+  display: flex;
+  min-height: 82px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  padding: 10px;
+  border: 1px dashed rgba(57, 135, 110, 0.38);
+  border-radius: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.food-ai-assist__photo-state img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 9px;
+}
+
+.food-ai-assist__photo-actions,
+.food-ai-assist__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.food-ai-assist__meta {
+  align-items: center;
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.food-ai-assist__suggestions {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.food-ai-assist__suggestions-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.food-ai-assist__suggestions-title span,
+.food-ai-suggestion label > span,
+.food-ai-suggestion__note > span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.food-ai-assist__batch-total {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.food-ai-assist__batch-total strong {
+  color: #167856;
+  font-size: 14px;
+}
+
+.food-ai-suggestion {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.food-ai-suggestion__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.food-ai-suggestion__fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.food-ai-suggestion label {
+  min-width: 0;
+}
+
+.food-ai-suggestion label > span,
+.food-ai-suggestion__note > span {
+  margin-bottom: 5px;
+}
+
+.food-ai-suggestion :deep(.el-input-number) {
+  width: 100%;
+}
+
+.food-ai-assist__save-all {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  border-radius: 14px;
+  background: rgba(223, 248, 234, 0.72);
+  color: #356c58;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .food-ai-assist__sources {
+    grid-template-columns: 1fr;
+  }
+
+  .food-ai-assist__trigger small {
+    display: none;
+  }
+
+  .food-ai-assist__suggestions-title,
+  .food-ai-assist__save-all {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .food-ai-suggestion__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+</style>

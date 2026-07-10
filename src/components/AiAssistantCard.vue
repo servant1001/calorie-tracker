@@ -14,6 +14,7 @@ import type { ActivityLevel, MealType } from '@/types/common'
 import type { ExerciseRecord } from '@/types/exercise'
 import type { FoodFormPayload, FoodRecord } from '@/types/food'
 import { createOptimizedMealPhotoDataUrl } from '@/utils/image'
+import { downloadMealRecommendationImage } from '@/utils/mealRecommendationImage'
 import { showError, showSuccess } from '@/utils/message'
 
 interface AiDraftFoodItem {
@@ -75,6 +76,7 @@ const dietaryGap = ref<DietaryGapResponse | null>(null)
 const nextMealType = ref<MealType>(getSuggestedMealType())
 const isGeneratingMealRecommendation = ref(false)
 const mealRecommendation = ref<MealRecommendationResponse | null>(null)
+const isDownloadingMealRecommendation = ref(false)
 
 const parsedTotalCalories = computed(() =>
   parsedItems.value.reduce((sum, item) => sum + Math.round(item.quantity * item.caloriesPerUnit), 0),
@@ -413,6 +415,23 @@ async function handleGenerateMealRecommendation() {
   }
 }
 
+async function handleDownloadMealRecommendation() {
+  if (!mealRecommendation.value) {
+    return
+  }
+
+  isDownloadingMealRecommendation.value = true
+
+  try {
+    await downloadMealRecommendationImage(mealRecommendation.value, props.recordDate)
+    showSuccess('個人化餐點建議已下載為圖片。')
+  } catch (error) {
+    showError(error, '餐點建議圖片產生失敗，請稍後再試。')
+  } finally {
+    isDownloadingMealRecommendation.value = false
+  }
+}
+
 watch(
   () => props.recordDate,
   () => {
@@ -721,6 +740,15 @@ watch(
               </div>
               <p>{{ mealRecommendation.summary }}</p>
             </div>
+
+            <el-button
+              class="meal-recommendation-download"
+              plain
+              :loading="isDownloadingMealRecommendation"
+              @click="handleDownloadMealRecommendation"
+            >
+              下載餐點建議圖片
+            </el-button>
 
             <article v-for="recommendation in mealRecommendation.recommendations" :key="recommendation.name" class="meal-recommendation-card">
               <div class="meal-recommendation-card__top">
@@ -1211,6 +1239,10 @@ watch(
   display: grid;
   gap: 10px;
   margin-top: 14px;
+}
+
+.meal-recommendation-download {
+  justify-self: flex-start;
 }
 
 .meal-recommendation-result__summary {

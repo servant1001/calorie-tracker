@@ -17,6 +17,7 @@ const formRef = ref<FormInstance>()
 const isDialogVisible = ref(false)
 const isSubmitting = ref(false)
 const editingFoodId = ref<string | null>(null)
+const useManualTotalCalories = ref(false)
 
 const filters = reactive({
   recordDate: formatDate(new Date()),
@@ -30,6 +31,7 @@ const form = reactive<FoodFormPayload>({
   quantity: 1,
   unit: '份',
   caloriesPerUnit: 0,
+  totalCalories: 0,
   note: '',
 })
 
@@ -46,6 +48,9 @@ const dialogTitle = computed(() => (editingFoodId.value ? '編輯飲食紀錄' :
 const filteredRecords = computed(() => foodsStore.filteredRecords)
 const totalCalories = computed(() => foodsStore.totalCalories)
 const todayCount = computed(() => filteredRecords.value.length)
+const calculatedTotalCalories = computed(() =>
+  Math.round(form.quantity * form.caloriesPerUnit),
+)
 
 watch(
   () => [filters.recordDate, filters.mealType] as const,
@@ -62,8 +67,10 @@ function resetForm() {
   form.quantity = 1
   form.unit = '份'
   form.caloriesPerUnit = 0
+  form.totalCalories = 0
   form.note = ''
   editingFoodId.value = null
+  useManualTotalCalories.value = false
 }
 
 function openCreateDialog() {
@@ -79,9 +86,30 @@ function openEditDialog(record: FoodRecord) {
   form.quantity = record.quantity
   form.unit = record.unit
   form.caloriesPerUnit = record.caloriesPerUnit
+  form.totalCalories = record.totalCalories
   form.note = record.note
+  useManualTotalCalories.value = record.totalCalories !== record.quantity * record.caloriesPerUnit
   isDialogVisible.value = true
 }
+
+watch(
+  () => [form.quantity, form.caloriesPerUnit],
+  () => {
+    if (!useManualTotalCalories.value) {
+      form.totalCalories = calculatedTotalCalories.value
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => useManualTotalCalories.value,
+  (isManual) => {
+    if (!isManual) {
+      form.totalCalories = calculatedTotalCalories.value
+    }
+  },
+)
 
 async function fetchFoods() {
   if (!authStore.userId) {
@@ -304,8 +332,22 @@ onMounted(async () => {
           <el-input-number v-model="form.caloriesPerUnit" :min="0" :step="10" />
         </el-form-item>
 
-        <el-form-item label="總熱量">
-          <el-input :model-value="`${form.quantity * form.caloriesPerUnit} kcal`" readonly />
+        <el-form-item label="總熱量模式" class="form-item-span-2">
+          <el-segmented
+            v-model="useManualTotalCalories"
+            :options="[
+              { label: '自動計算', value: false },
+              { label: '手動輸入', value: true },
+            ]"
+          />
+        </el-form-item>
+
+        <el-form-item v-if="useManualTotalCalories" label="總熱量 (kcal)">
+          <el-input-number v-model="form.totalCalories" :min="0" :step="10" />
+        </el-form-item>
+
+        <el-form-item v-else label="總熱量">
+          <el-input :model-value="`${calculatedTotalCalories} kcal`" readonly />
         </el-form-item>
 
         <el-form-item label="備註" prop="note" class="form-item-span-2">

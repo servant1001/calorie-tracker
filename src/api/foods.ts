@@ -9,10 +9,14 @@ function getFoodsCollectionRef(userId: string) {
 }
 
 function buildFoodRecord(id: string, payload: FoodFormPayload): FoodRecord {
+  const totalCalories = typeof payload.totalCalories === 'number'
+    ? payload.totalCalories
+    : calculateFoodCalories(payload.quantity, payload.caloriesPerUnit)
+
   return {
     id,
     ...payload,
-    totalCalories: calculateFoodCalories(payload.quantity, payload.caloriesPerUnit),
+    totalCalories,
   }
 }
 

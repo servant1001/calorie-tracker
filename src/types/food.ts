@@ -19,5 +19,6 @@ export interface FoodFormPayload {
   quantity: number
   unit: string
   caloriesPerUnit: number
+  totalCalories?: number
   note: string
 }

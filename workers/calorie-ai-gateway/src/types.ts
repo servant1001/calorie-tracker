@@ -68,6 +68,23 @@ export interface DailySummaryBody {
   }>
 }
 
+export interface DietaryGapBody {
+  recordDate: string
+  dailyGoal: number
+  currentWeight: number
+  targetWeight: number
+  intakeTotal: number
+  exerciseTotal: number
+  foods: Array<{
+    foodName: string
+    mealType: MealType
+    quantity: number
+    unit: string
+    totalCalories: number
+    note?: string
+  }>
+}
+
 export interface ParsedFoodItem {
   mealType: MealType
   foodName: string
@@ -89,6 +106,42 @@ export interface DailySummaryResult {
   summary: string
   suggestion: string
   highlights: string[]
+}
+
+interface DietaryGapMetric {
+  status: 'low' | 'adequate' | 'unknown'
+  estimatedGrams?: number
+  estimatedServings?: number
+  targetGrams?: number
+  targetServings?: number
+  gapGrams?: number
+  gapServings?: number
+  message: string
+}
+
+export interface DietaryGapResult {
+  protein: DietaryGapMetric & {
+    estimatedGrams: number
+    targetGrams: number
+    gapGrams: number
+  }
+  vegetables: DietaryGapMetric & {
+    estimatedServings: number
+    targetServings: number
+    gapServings: number
+  }
+  fiber: DietaryGapMetric & {
+    estimatedGrams: number
+    targetGrams: number
+    gapGrams: number
+  }
+  calorieDistribution: {
+    status: 'balanced' | 'skewed' | 'unknown'
+    message: string
+  }
+  dinnerSuggestion: string
+  highlights: string[]
+  disclaimer: string
 }
 
 export interface ProviderAdapter {

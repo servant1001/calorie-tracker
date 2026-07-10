@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Bot, Brain, Camera, ImagePlus, Sparkles, Utensils } from 'lucide-vue-next'
+import { Bot, Brain, Camera, ImagePlus, Leaf, Sparkles, Utensils, Wheat } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
-import { analyzeMealPhoto, generateDailySummary, parseFoodText } from '@/api/ai'
+import { analyzeDietaryGap, analyzeMealPhoto, generateDailySummary, parseFoodText } from '@/api/ai'
 import { useFoodsStore } from '@/stores/foods'
-import type { DailySummaryResponse } from '@/types/ai'
+import type { DailySummaryResponse, DietaryGapResponse, DietaryGapStatus } from '@/types/ai'
 import type { ActivityLevel, MealType } from '@/types/common'
 import type { ExerciseRecord } from '@/types/exercise'
 import type { FoodFormPayload, FoodRecord } from '@/types/food'
@@ -64,6 +64,8 @@ const isAnalyzingPhoto = ref(false)
 const isSaving = ref(false)
 const isGeneratingSummary = ref(false)
 const summary = ref<DailySummaryResponse | null>(null)
+const isAnalyzingDietaryGap = ref(false)
+const dietaryGap = ref<DietaryGapResponse | null>(null)
 
 const parsedTotalCalories = computed(() =>
   parsedItems.value.reduce((sum, item) => sum + Math.round(item.quantity * item.caloriesPerUnit), 0),
@@ -320,10 +322,48 @@ async function handleGenerateSummary() {
   }
 }
 
+function getGapStatusLabel(status: DietaryGapStatus) {
+  if (status === 'adequate') {
+    return '充足'
+  }
+
+  if (status === 'unknown') {
+    return '待確認'
+  }
+
+  return '待補足'
+}
+
+async function handleAnalyzeDietaryGap() {
+  if (!props.foods.length) {
+    showError(new Error('今天還沒有飲食資料，暫時無法分析營養缺口。'))
+    return
+  }
+
+  isAnalyzingDietaryGap.value = true
+
+  try {
+    dietaryGap.value = await analyzeDietaryGap({
+      recordDate: props.recordDate,
+      dailyGoal: props.dailyGoal,
+      currentWeight: props.currentWeight,
+      targetWeight: props.targetWeight,
+      intakeTotal: props.intakeTotal,
+      exerciseTotal: props.exerciseTotal,
+      foods: props.foods,
+    })
+  } catch (error) {
+    showError(error, 'AI 飲食缺口分析失敗，請稍後再試。')
+  } finally {
+    isAnalyzingDietaryGap.value = false
+  }
+}
+
 watch(
   () => props.recordDate,
   () => {
     summary.value = null
+    dietaryGap.value = null
     resetParsedItems()
     inputText.value = ''
     resetMealPhoto()
@@ -519,6 +559,82 @@ watch(
         >
           產生今日 AI 分析
         </el-button>
+
+        <section class="dietary-gap-section">
+          <div class="dietary-gap-section__heading">
+            <div>
+              <strong>今日飲食缺口</strong>
+              <p>從已記錄的餐點估算蛋白質、蔬菜、纖維與餐次分配。</p>
+            </div>
+            <el-button
+              type="success"
+              plain
+              :loading="isAnalyzingDietaryGap"
+              @click="handleAnalyzeDietaryGap"
+            >
+              分析飲食缺口
+            </el-button>
+          </div>
+
+          <div v-if="dietaryGap" class="dietary-gap-result">
+            <div class="dietary-gap-result__meta">
+              <span>AI 估算 · {{ dietaryGap.provider }} · {{ dietaryGap.model }}</span>
+            </div>
+
+            <div class="dietary-gap-metrics">
+              <article class="dietary-gap-metric" :class="`dietary-gap-metric--${dietaryGap.protein.status}`">
+                <div class="dietary-gap-metric__title">
+                  <Utensils :size="16" />
+                  <span>蛋白質</span>
+                  <el-tag round size="small" :type="dietaryGap.protein.status === 'low' ? 'danger' : dietaryGap.protein.status === 'adequate' ? 'success' : 'info'">
+                    {{ getGapStatusLabel(dietaryGap.protein.status) }}
+                  </el-tag>
+                </div>
+                <strong>約 {{ Math.round(dietaryGap.protein.estimatedGrams) }} / {{ Math.round(dietaryGap.protein.targetGrams) }} g</strong>
+                <p>{{ dietaryGap.protein.gapGrams > 0 ? `尚可補約 ${Math.round(dietaryGap.protein.gapGrams)} g` : dietaryGap.protein.message }}</p>
+              </article>
+
+              <article class="dietary-gap-metric" :class="`dietary-gap-metric--${dietaryGap.vegetables.status}`">
+                <div class="dietary-gap-metric__title">
+                  <Leaf :size="16" />
+                  <span>蔬菜</span>
+                  <el-tag round size="small" :type="dietaryGap.vegetables.status === 'low' ? 'danger' : dietaryGap.vegetables.status === 'adequate' ? 'success' : 'info'">
+                    {{ getGapStatusLabel(dietaryGap.vegetables.status) }}
+                  </el-tag>
+                </div>
+                <strong>約 {{ Math.round(dietaryGap.vegetables.estimatedServings) }} / {{ Math.round(dietaryGap.vegetables.targetServings) }} 份</strong>
+                <p>{{ dietaryGap.vegetables.gapServings > 0 ? `尚可補約 ${Math.round(dietaryGap.vegetables.gapServings)} 份` : dietaryGap.vegetables.message }}</p>
+              </article>
+
+              <article class="dietary-gap-metric" :class="`dietary-gap-metric--${dietaryGap.fiber.status}`">
+                <div class="dietary-gap-metric__title">
+                  <Wheat :size="16" />
+                  <span>膳食纖維</span>
+                  <el-tag round size="small" :type="dietaryGap.fiber.status === 'low' ? 'danger' : dietaryGap.fiber.status === 'adequate' ? 'success' : 'info'">
+                    {{ getGapStatusLabel(dietaryGap.fiber.status) }}
+                  </el-tag>
+                </div>
+                <strong>約 {{ Math.round(dietaryGap.fiber.estimatedGrams) }} / {{ Math.round(dietaryGap.fiber.targetGrams) }} g</strong>
+                <p>{{ dietaryGap.fiber.gapGrams > 0 ? `尚可補約 ${Math.round(dietaryGap.fiber.gapGrams)} g` : dietaryGap.fiber.message }}</p>
+              </article>
+            </div>
+
+            <article class="dietary-gap-callout">
+              <span>餐次熱量分配</span>
+              <p>{{ dietaryGap.calorieDistribution.message }}</p>
+            </article>
+
+            <article class="dietary-gap-callout dietary-gap-callout--dinner">
+              <span>晚餐建議</span>
+              <p>{{ dietaryGap.dinnerSuggestion }}</p>
+            </article>
+
+            <ul v-if="dietaryGap.highlights.length" class="dietary-gap-highlights">
+              <li v-for="item in dietaryGap.highlights" :key="item">{{ item }}</li>
+            </ul>
+            <p class="dietary-gap-disclaimer">{{ dietaryGap.disclaimer }}</p>
+          </div>
+        </section>
 
         <div v-if="summary" class="summary-result">
           <div class="summary-result__intro">
@@ -815,6 +931,147 @@ watch(
   margin-top: 16px;
 }
 
+.dietary-gap-section {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(72, 104, 92, 0.12);
+}
+
+.dietary-gap-section__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.dietary-gap-section__heading strong {
+  display: block;
+  font-size: 16px;
+}
+
+.dietary-gap-section__heading p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.dietary-gap-result {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.dietary-gap-result__meta {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.dietary-gap-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dietary-gap-metric {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.44);
+}
+
+.dietary-gap-metric--low {
+  background: linear-gradient(145deg, rgba(255, 239, 230, 0.78), rgba(255, 248, 241, 0.48));
+}
+
+.dietary-gap-metric--adequate {
+  background: linear-gradient(145deg, rgba(229, 248, 234, 0.78), rgba(242, 253, 244, 0.48));
+}
+
+.dietary-gap-metric__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.dietary-gap-metric__title :deep(.el-tag) {
+  margin-left: auto;
+}
+
+.dietary-gap-metric strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--text-main);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.dietary-gap-metric p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dietary-gap-callout {
+  padding: 13px 14px;
+  border-radius: 15px;
+  background: rgba(238, 246, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+}
+
+.dietary-gap-callout--dinner {
+  background: linear-gradient(145deg, rgba(236, 249, 235, 0.72), rgba(225, 245, 237, 0.46));
+}
+
+.dietary-gap-callout span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dietary-gap-callout p {
+  margin: 5px 0 0;
+  line-height: 1.6;
+}
+
+.dietary-gap-highlights {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dietary-gap-highlights li {
+  position: relative;
+  padding-left: 15px;
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.dietary-gap-highlights li::before {
+  position: absolute;
+  top: 0.55em;
+  left: 1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3ca879;
+  content: '';
+}
+
+.dietary-gap-disclaimer {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .summary-result {
   display: flex;
   flex-direction: column;
@@ -900,13 +1157,19 @@ watch(
 
 @media (max-width: 768px) {
   .draft-item__grid,
-  .summary-stats {
+  .summary-stats,
+  .dietary-gap-metrics {
     grid-template-columns: 1fr;
   }
 
   .draft-footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .dietary-gap-section__heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

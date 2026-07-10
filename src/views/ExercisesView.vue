@@ -15,6 +15,7 @@ const formRef = ref<FormInstance>()
 const isDialogVisible = ref(false)
 const isSubmitting = ref(false)
 const editingExerciseId = ref<string | null>(null)
+const selectedRecords = ref<ExerciseRecord[]>([])
 const useManualTotalCalories = ref(false)
 
 const filters = reactive({
@@ -160,6 +161,28 @@ async function handleDelete(record: ExerciseRecord) {
   }
 }
 
+function handleSelectionChange(records: ExerciseRecord[]) {
+  selectedRecords.value = records
+}
+
+async function handleBatchDelete() {
+  if (!authStore.userId || !selectedRecords.value.length) {
+    return
+  }
+
+  const recordsToDelete = [...selectedRecords.value]
+
+  try {
+    await Promise.all(recordsToDelete.map((record) => exercisesStore.removeExercise(authStore.userId!, record.id)))
+    selectedRecords.value = []
+    await fetchExercises()
+    showSuccess(`已刪除 ${recordsToDelete.length} 筆運動紀錄。`)
+  } catch (error) {
+    await fetchExercises()
+    showError(error, '批次刪除運動紀錄失敗，請稍後再試。')
+  }
+}
+
 onMounted(async () => {
   await fetchExercises()
 })
@@ -198,6 +221,18 @@ onMounted(async () => {
 
           <div class="action-group">
             <el-button :icon="RefreshRight" plain @click="fetchExercises">重新整理</el-button>
+            <el-popconfirm
+              :title="`確定要刪除已選的 ${selectedRecords.length} 筆運動紀錄嗎？`"
+              confirm-button-text="刪除"
+              cancel-button-text="取消"
+              @confirm="handleBatchDelete"
+            >
+              <template #reference>
+                <el-button type="danger" plain :icon="Delete" :disabled="!selectedRecords.length">
+                  刪除已選 ({{ selectedRecords.length }})
+                </el-button>
+              </template>
+            </el-popconfirm>
             <el-button type="success" :icon="Plus" @click="openCreateDialog">新增運動紀錄</el-button>
           </div>
         </div>
@@ -228,7 +263,9 @@ onMounted(async () => {
         stripe
         class="foods-table journal-table"
         empty-text="目前沒有符合條件的運動紀錄"
+        @selection-change="handleSelectionChange"
       >
+        <el-table-column type="selection" width="52" />
         <el-table-column prop="recordDate" label="日期" min-width="120" />
         <el-table-column prop="exerciseName" label="運動名稱" min-width="180" />
         <el-table-column prop="durationMinutes" label="運動時間" min-width="130">

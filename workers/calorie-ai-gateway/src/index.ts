@@ -10,9 +10,16 @@ import {
   buildDailySummaryUserPrompt,
   dailySummarySchema,
 } from './prompts/summary'
+import {
+  buildDietaryGapSystemPrompt,
+  buildDietaryGapUserPrompt,
+  dietaryGapSchema,
+} from './prompts/dietaryGap'
 import type {
   DailySummaryBody,
   DailySummaryResult,
+  DietaryGapBody,
+  DietaryGapResult,
   Env,
   MealPhotoBody,
   ParseFoodTextBody,
@@ -113,6 +120,27 @@ async function handleDailySummary(env: Env, request: Request) {
   })
 }
 
+async function handleDietaryGap(env: Env, request: Request) {
+  const body = await parseJsonBody<DietaryGapBody>(request)
+
+  if (!body.foods?.length) {
+    return jsonResponse({ error: '請先提供至少一筆飲食紀錄。' }, { status: 400 })
+  }
+
+  const response = await generateStructuredOutput<DietaryGapResult>(env, {
+    schemaName: 'dietary_gap_result',
+    schema: dietaryGapSchema as unknown as Record<string, unknown>,
+    systemPrompt: buildDietaryGapSystemPrompt(),
+    userPrompt: buildDietaryGapUserPrompt(body),
+  })
+
+  return jsonResponse({
+    ...response.data,
+    provider: response.provider,
+    model: response.model,
+  })
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
@@ -134,6 +162,8 @@ export default {
         response = await handleMealPhoto(env, request)
       } else if (request.method === 'POST' && url.pathname === '/api/ai/daily-summary') {
         response = await handleDailySummary(env, request)
+      } else if (request.method === 'POST' && url.pathname === '/api/ai/dietary-gap') {
+        response = await handleDietaryGap(env, request)
       } else if (request.method === 'GET' && url.pathname === '/health') {
         response = jsonResponse({ ok: true, service: 'calorie-ai-gateway' })
       } else {

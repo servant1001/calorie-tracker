@@ -21,6 +21,7 @@ const formRef = ref<FormInstance>()
 const isDialogVisible = ref(false)
 const isSubmitting = ref(false)
 const editingFoodId = ref<string | null>(null)
+const selectedRecords = ref<FoodRecord[]>([])
 const useManualTotalCalories = ref(false)
 const isAiAssistVisible = ref(false)
 const aiFoodText = ref('')
@@ -359,6 +360,28 @@ async function handleDelete(record: FoodRecord) {
   }
 }
 
+function handleSelectionChange(records: FoodRecord[]) {
+  selectedRecords.value = records
+}
+
+async function handleBatchDelete() {
+  if (!authStore.userId || !selectedRecords.value.length) {
+    return
+  }
+
+  const recordsToDelete = [...selectedRecords.value]
+
+  try {
+    await Promise.all(recordsToDelete.map((record) => foodsStore.removeFood(authStore.userId!, record.id)))
+    selectedRecords.value = []
+    await fetchFoods()
+    showSuccess(`已刪除 ${recordsToDelete.length} 筆飲食紀錄。`)
+  } catch (error) {
+    await fetchFoods()
+    showError(error, '批次刪除飲食紀錄失敗，請稍後再試。')
+  }
+}
+
 onMounted(async () => {
   await fetchFoods()
 })
@@ -397,6 +420,18 @@ onMounted(async () => {
 
           <div class="action-group">
             <el-button :icon="RefreshRight" plain @click="fetchFoods">重新整理</el-button>
+            <el-popconfirm
+              :title="`確定要刪除已選的 ${selectedRecords.length} 筆飲食紀錄嗎？`"
+              confirm-button-text="刪除"
+              cancel-button-text="取消"
+              @confirm="handleBatchDelete"
+            >
+              <template #reference>
+                <el-button type="danger" plain :icon="Delete" :disabled="!selectedRecords.length">
+                  刪除已選 ({{ selectedRecords.length }})
+                </el-button>
+              </template>
+            </el-popconfirm>
             <el-button type="primary" :icon="Plus" @click="openCreateDialog">新增飲食紀錄</el-button>
           </div>
         </div>
@@ -433,7 +468,15 @@ onMounted(async () => {
         </div>
       </div>
 
-      <el-table v-loading="foodsStore.isLoading" :data="filteredRecords" stripe class="foods-table journal-table" empty-text="目前沒有符合條件的飲食紀錄">
+      <el-table
+        v-loading="foodsStore.isLoading"
+        :data="filteredRecords"
+        stripe
+        class="foods-table journal-table"
+        empty-text="目前沒有符合條件的飲食紀錄"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="52" />
         <el-table-column prop="recordDate" label="日期" min-width="120" />
         <el-table-column label="餐別" min-width="110">
           <template #default="{ row }">

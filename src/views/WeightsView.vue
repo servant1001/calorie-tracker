@@ -18,6 +18,7 @@ const formRef = ref<FormInstance>()
 const isDialogVisible = ref(false)
 const isSubmitting = ref(false)
 const editingWeightId = ref<string | null>(null)
+const selectedRecords = ref<WeightRecord[]>([])
 
 const filters = reactive({
   recordDate: '',
@@ -130,6 +131,28 @@ async function handleDelete(record: WeightRecord) {
   }
 }
 
+function handleSelectionChange(records: WeightRecord[]) {
+  selectedRecords.value = records
+}
+
+async function handleBatchDelete() {
+  if (!authStore.userId || !selectedRecords.value.length) {
+    return
+  }
+
+  const recordsToDelete = [...selectedRecords.value]
+
+  try {
+    await Promise.all(recordsToDelete.map((record) => weightsStore.removeWeight(authStore.userId!, record.id)))
+    selectedRecords.value = []
+    await loadWeightData()
+    showSuccess(`已刪除 ${recordsToDelete.length} 筆體重紀錄。`)
+  } catch (error) {
+    await loadWeightData()
+    showError(error, '批次刪除體重紀錄失敗，請稍後再試。')
+  }
+}
+
 onMounted(async () => {
   await loadWeightData()
 })
@@ -168,6 +191,18 @@ onMounted(async () => {
 
           <div class="action-group">
             <el-button :icon="RefreshRight" plain @click="loadWeightData">重新整理</el-button>
+            <el-popconfirm
+              :title="`確定要刪除已選的 ${selectedRecords.length} 筆體重紀錄嗎？`"
+              confirm-button-text="刪除"
+              cancel-button-text="取消"
+              @confirm="handleBatchDelete"
+            >
+              <template #reference>
+                <el-button type="danger" plain :icon="Delete" :disabled="!selectedRecords.length">
+                  刪除已選 ({{ selectedRecords.length }})
+                </el-button>
+              </template>
+            </el-popconfirm>
             <el-button :icon="Plus" @click="openCreateDialog">新增體重紀錄</el-button>
           </div>
         </div>
@@ -201,7 +236,9 @@ onMounted(async () => {
         stripe
         class="journal-table"
         empty-text="目前沒有符合條件的體重紀錄"
+        @selection-change="handleSelectionChange"
       >
+        <el-table-column type="selection" width="52" />
         <el-table-column prop="recordDate" label="日期" min-width="120" />
         <el-table-column prop="weight" label="體重" min-width="120">
           <template #default="{ row }">

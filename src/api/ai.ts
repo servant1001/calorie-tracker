@@ -1,4 +1,6 @@
 import type {
+  DietaryGapRequest,
+  DietaryGapResponse,
   DailySummaryRequest,
   DailySummaryResponse,
   MealPhotoRequest,
@@ -53,4 +55,8 @@ export function analyzeMealPhoto(payload: MealPhotoRequest) {
 
 export function generateDailySummary(payload: DailySummaryRequest) {
   return postJson<DailySummaryResponse>('daily-summary', payload)
+}
+
+export function analyzeDietaryGap(payload: DietaryGapRequest) {
+  return postJson<DietaryGapResponse>('dietary-gap', payload)
 }
